@@ -1,0 +1,65 @@
+MODULE ServiceOperation;
+
+REQUIRE ServicesSettings;
+
+NAMESPACE Services;
+
+CLASS ServiceOperation 'Services operation';
+
+name '{Name}' = DATA STRING[50] (ServiceOperation) NONULL IN id;
+
+id '{ID}'= DATA STRING[20] (ServiceOperation);
+serviceOperation = GROUP AGGR ServiceOperation t BY id(t);
+
+FORM serviceOperation 'Services operation'
+    OBJECTS o = ServiceOperation PANEL
+    PROPERTIES(o) name, id
+
+    EDIT ServiceOperation OBJECT o;
+;
+
+DESIGN serviceOperation {
+    OBJECTS {
+        NEW header {
+            horizontal = TRUE;
+            MOVE PROPERTY(name(o)) { charWidth = 30; }
+            MOVE PROPERTY(id(o));
+        }
+        NEW pane {
+            lines = 3;
+            NEW otherInformation {
+                caption = 'Other information';
+            }
+        }
+        NEW tabbedPane {
+            fill = 1;
+            tabbed = TRUE;
+        }
+    }
+}
+
+FORM serviceOperations 'Types of production orders'
+    OBJECTS o = ServiceOperation
+    PROPERTIES(o) READONLY name, id
+
+    LIST ServiceOperation OBJECT o;
+;
+
+EXTEND FORM options
+    OBJECTS oo = ServiceOperation
+    PROPERTIES(oo) READONLY name, id
+    PROPERTIES(oo) NEWSESSION NEW, EDIT, DELETE
+;
+
+DESIGN options {
+    tabbedPane {
+        MOVE BOX(oo);
+    }
+}
+
+countServiceOperations 'Number of types' () = GROUP SUM 1 IF r IS ServiceOperation;
+firstServiceOperation () = GROUP LAST ServiceOperation t ORDER DESC t WHERE t IS ServiceOperation;
+
+defaultServiceOperation () = firstServiceOperation()
+    IF countServiceOperations() = 1;
+

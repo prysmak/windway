@@ -20,8 +20,8 @@ nameParent 'Parent' (Category c) = name(parent(c));
 
 rootCategory() = GROUP MIN Category c AS Category IF NOT parent(c);
 
-CONSTRAINT [GROUP SUM 1 IF Category l IS Category AND NOT parent(l)]() > 1
-    MESSAGE 'Parent category is not specified';
+//CONSTRAINT [GROUP SUM 1 IF Category l IS Category AND NOT parent(l)]() > 1
+//    MESSAGE 'Parent category is not specified';
 
 CONSTRAINT DROPPED(Category c IS Category) AND PREV(parent(Category child) = c)
         MESSAGE 'It is forbidden to delete categories that are referenced by other categories';

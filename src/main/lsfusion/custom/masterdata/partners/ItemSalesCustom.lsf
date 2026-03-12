@@ -1,0 +1,9 @@
+MODULE ItemSalesCustom;
+
+REQUIRE ItemSales;
+
+NAMESPACE MasterData;
+
+EXTEND FORM items
+    PROPERTIES salesPrice(i)
+;

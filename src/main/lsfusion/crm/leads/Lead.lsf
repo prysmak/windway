@@ -28,7 +28,7 @@ prefixName = ABSTRACT VALUE ISTRING (Lead);
 fullName (Lead l) = CONCAT ' - ', prefixName(l), name(l);
 
 customer 'Customer' = DATA Partner (Lead) INDEXED;
-nameCustomer 'Customer' (Lead l) = name(customer(l));
+nameCustomer 'Customer' (Lead l) = name(customer(l)) CHARWIDTH 20;
 @definePropertyValue(lead, customer, 'Customer', nameCustomer);
 
 prefixName (Lead l) += nameCustomer(l);

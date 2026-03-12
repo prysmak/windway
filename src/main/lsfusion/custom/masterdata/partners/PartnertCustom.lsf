@@ -1,0 +1,70 @@
+MODULE PartnertCustom;
+
+REQUIRE Partner;
+
+NAMESPACE MasterData;
+
+instagram 'Instagram' = DATA ISTRING[50] (Partner) CHARWIDTH 12;
+
+telegram 'Telegram' = DATA ISTRING[50] (Partner) CHARWIDTH 12;
+
+phoneFilter 'Телефон' = DATA LOCAL NESTED STRING[30] ();
+
+emailFilter 'Почта' = DATA LOCAL NESTED STRING[30] ();
+
+telegramFilter 'Телеграм' = DATA LOCAL NESTED STRING[30] ();
+
+instagramFilter 'Инстаграм' = DATA LOCAL NESTED STRING[30] ();
+
+EXTEND FORM dialogPartners
+    PROPERTIES() phoneFilter
+    FILTERS isISubstring(phone(p), phoneFilter()) OR NOT phoneFilter()
+    
+    PROPERTIES() emailFilter
+    FILTERS isISubstring(email(p), emailFilter()) OR NOT emailFilter()
+
+    PROPERTIES() telegramFilter
+    FILTERS isISubstring(telegram(p), telegramFilter()) OR NOT telegramFilter()
+
+    PROPERTIES() instagramFilter
+    FILTERS isISubstring(instagram(p), instagramFilter()) OR NOT instagramFilter()
+;
+
+DESIGN dialogPartners {
+    OBJECTS {
+        filters {
+            MOVE PROPERTY(phoneFilter()) { placeholder = '{Phone}'; }
+            MOVE PROPERTY(emailFilter()) { placeholder = '{Email}'; }
+            MOVE PROPERTY(telegramFilter());
+            MOVE PROPERTY(instagramFilter());
+        }
+        NEW action AFTER filters {
+
+        }
+    }
+}
+
+//
+//FORM parnterList 'Выбор клиента'
+//    PROPERTIES filterClientName(), filterPhone(), filterTelegram()//, filterClientInstagram(), addClient()
+//
+//    OBJECTS c = Partner
+//    PROPERTIES(c) READONLY name, phone//, telegram, instagram
+//    FILTERS filterName(c),
+//        filterPhone(c)
+////    ,
+////        filterTelegram(c),
+////        filterInstagram(c)
+//    LIST Partner OBJECT c
+//;
+//
+//DESIGN parnterList {
+//    OBJECTS {
+//        BOX(c) {
+//            caption = '';
+//        }
+//        REMOVE TOOLBARBOX(c);
+//    }
+//    //  REMOVE TOOLBARBOX;
+//}
+//

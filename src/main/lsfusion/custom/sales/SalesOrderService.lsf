@@ -1,0 +1,51 @@
+MODULE SalesOrderService;
+
+REQUIRE ServiceOrder, ServiceWork, SalesOrder;
+
+NAMESPACE Sales;
+
+serviceOrder = DATA ServiceOrder (OrderLine);
+numberServiceOrder 'Мероприятие' (OrderLine ol) = number(serviceOrder(ol));
+
+countOrderLines 'Кол-во участников' (ServiceOrder so) = GROUP SUM 1 IF serviceOrder(OrderLine ol) = so;
+
+nameOrderLines 'Участники' (ServiceOrder so) = GROUP CONCAT name(customer(order(OrderLine l))) IF serviceOrder(l) = so, ', ' ORDER l;
+
+CONSTRAINT SETCHANGED(serviceOrder(OrderLine ol)) AND NOT item(serviceOrder(ol)) = item(ol)
+    CHECKED BY serviceOrder[OrderLine]
+    MESSAGE 'Продукт заявки не совпадает с продуктом мероприятия';
+
+EXTEND FORM order
+    PROPERTIES (l) numberServiceOrder
+;
+
+in 'Отм' = DATA BOOLEAN (OrderLine, ServiceWork);
+
+totalDuration 'Участие, часов' (OrderLine ol) = GROUP SUM duration(ServiceWork sw) IF in(ol, sw);
+
+countOrderLines 'Кол-во участников' (ServiceWork sw) = GROUP SUM 1 IF in(OrderLine l, sw);
+
+nameOrderLines 'Участники' (ServiceWork sw) = GROUP CONCAT name(customer(order(OrderLine l))) IF in(l, sw), ', ' ORDER l;
+
+EXTEND FORM serviceOrder
+    OBJECTS ol = OrderLine
+    PROPERTIES nameStatus 'Status' = nameStatus(order(ol)), nameCustomer 'Customer' = nameCustomer(order(ol)), quantity(ol), untaxedAmount(ol), in(ol, sw), totalDuration(ol)
+    FILTERS serviceOrder(ol) = o 
+; 
+
+DESIGN serviceOrder {
+    details {
+        NEW orderLines FIRST {
+            caption = 'Участники';
+            MOVE BOX(ol);
+        }
+    }
+}
+
+EXTEND FORM serviceOrders 
+    PROPERTIES READONLY countOrderLines(o), nameOrderLines(o)
+;
+
+EXTEND FORM serviceWorks
+    PROPERTIES READONLY countOrderLines(o), nameOrderLines(o) 
+;

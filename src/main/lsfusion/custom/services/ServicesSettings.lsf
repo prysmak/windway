@@ -1,0 +1,32 @@
+MODULE ServicesSettings;
+
+NAMESPACE Services;
+
+FORM options 'Settings'
+;
+
+DESIGN options {
+    OBJECTS {
+        NEW tabbedPane {
+            tabbed = TRUE;
+            fill = 1;
+            NEW commons {
+                caption = 'Main';
+            }
+        }
+    }
+}
+
+NAVIGATOR {
+    NEW FOLDER services 'Services' WINDOW toolbar IMAGE 'manufacturing.png' {
+        NEW FOLDER operations 'Operations' {
+        }
+        NEW FOLDER dashboards 'Processes' {
+        }
+        NEW FOLDER reporting 'Reporting' {
+        }
+        NEW FOLDER settings 'Configuration' {
+            NEW options;
+        }
+    }
+}

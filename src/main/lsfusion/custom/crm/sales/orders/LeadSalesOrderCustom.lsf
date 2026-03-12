@@ -1,0 +1,65 @@
+MODULE LeadSalesOrderCustom;
+
+REQUIRE LeadSalesOrder, LeadItemCustom, ItemSales, LeadCustom;
+
+NAMESPACE CRM;
+
+saleOrderType 'Тип заявки' = DATA Sales.OrderType (LeadType);
+nameSaleOrderType 'Тип заявки' (LeadType t) = name(saleOrderType(t));
+
+lead = DATA Lead (OrderLine);
+
+EXTEND FORM leadType
+    PROPERTIES nameSaleOrderType(o)
+;
+
+newOrderCustom (Lead l) {
+    NEW o = Sales.Order {
+        lead(o) <- l;
+        customer(o) <- customer(l);
+        type(o) <- saleOrderType(type(l));
+        deliveryAddress(o) <- addressCsv(l);
+        fill(o, l);
+        leadOrderCreated() <- o;
+        status(l) <- GROUP MAX LeadStatus s IF id(s) = 'order';
+
+        IF (item(l)) THEN NEW ol = OrderLine {
+            order(ol) <- o;
+            lead(ol) <- l;
+            item(ol) <- item(l);
+            quantity(ol) <- 1;
+            price(ol) <- salesPrice(item(l));
+            untaxedAmount(ol) <- salesPrice(item(l));
+        }
+        
+        FOR in(l, LeadItem i) DO NEW ol = OrderLine {
+            order(ol) <- o;
+            lead(ol) <- l;
+            item(ol) <- item(i);
+            quantity(ol) <- 1;
+            price(ol) <- salesPrice(item(i));
+            untaxedAmount(ol) <- salesPrice(item(i));
+        }
+    }
+}
+
+createOrderCustom 'Create Order' (Lead l) {
+    APPLY;
+    IF canceled() THEN RETURN;
+    
+    IF NOT customer(l) THEN
+        ASK 'Добавить клиента в базу?' DO NEWSESSION NEW p = Individual {
+            firstName(p) <- STRING[30](nameClient(l));
+            phone(p) <- phone(l);
+            email(p) <- email(l);
+            telegram(p) <- telegram(l);
+            instagram(p) <- instagram(l);
+            customer(l) <- p;
+            APPLY;
+        } 
+    
+    IF customer(l) THEN //   NEWSESSION {
+        newOrderCustom(l);
+        //APPLY;
+   // }
+}

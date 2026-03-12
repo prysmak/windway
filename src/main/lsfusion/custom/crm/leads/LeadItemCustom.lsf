@@ -1,0 +1,57 @@
+MODULE LeadItemCustom;
+
+REQUIRE LeadItem;
+
+NAMESPACE CRM;
+
+leadType 'для лидов' = DATA LeadType (Item);
+nameLeadType 'для лидов' (Item i) = name(leadType(i));
+
+EXTEND FORM items
+    PROPERTIES READONLY nameLeadType(i)
+;
+
+EXTEND FORM item
+    PROPERTIES nameLeadType(i)
+;
+
+DESIGN item {
+    column3 {
+        MOVE PROPERTY(nameLeadType(i));
+    }
+}
+
+CONSTRAINT SETCHANGED(item(Lead l)) AND NOT leadType(item(l)) = type(l)
+    CHECKED BY item[Lead]
+    MESSAGE 'Тип лида продукта не совпадает с типом лида'
+    ;
+
+WHEN LOCAL SETCHANGED(type(Lead l)) DO item(l) <- NULL;
+
+CLASS LeadItem;
+
+leadItem = AGGR LeadItem WHERE leadType(Item item);
+
+name(LeadItem li) = name(item(li));
+nameUom(LeadItem li) = nameUom(item(li));
+leadType(LeadItem li) = leadType(item(li));
+
+in 'Incl.' = DATA BOOLEAN (Lead, LeadItem);
+
+items 'Items' (Lead l) = GROUP CONCAT name(LeadItem i) IF in(l, i), ', ' ORDER i;
+
+@definePropertyValue(lead, items, 'Items');
+
+
+////EXTEND FORM lead
+////    PROPERTIES items(l)
+////;
+//
+//DESIGN lead {
+//    header {
+//        NEW items {
+//            MOVE PROPERTY(items(l));
+//            REMOVE PROPERTY(nameItem(l));
+//        }
+//    }
+//}

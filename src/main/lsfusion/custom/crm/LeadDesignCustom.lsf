@@ -1,0 +1,279 @@
+MODULE LeadDesignCustom;
+
+REQUIRE LeadCustom, LeadLost, LeadPartner, 
+        LeadCustomer, LeadCall, LeadEmail, LeadItemCustom,
+        LeadSalesOrderCustom, LeadKanbanCustom, 
+        LeadMarketing, Sales, LeadItemCustom, SalesOrderService;
+
+FORM client 
+    OBJECTS l = Lead PANEL 
+    PROPERTIES(l) id, name, nameStatus READONLY,
+        dateTime, probability,// expectedClosing, expectedRevenue,
+        nameType, nameCustomer, nameSalesPerson,
+        namePriority, tags,
+        phone, email, telegram, instagram,
+        description,
+        address, city, nameClient
+
+    
+    PROPERTIES(l) setLost SHOWIF NOT closed(l)
+
+    PROPERTIES(l) nameLostReason SHOWIF status(l) = lostLeadStatus() SELECT 'dropdown'
+
+    PROPERTIES(l) nameCampaign, nameMedium, nameSource
+    
+//    PROPERTIES items(l)
+      PROPERTIES nameItem(l)
+
+    OBJECTS leadl = LeadHistory
+    PROPERTIES(leadl) READONLY dateTime, nameUser, hostnameComputer, type, description//, pdescription = description PANEL
+    FILTERS lead(leadl) = l
+
+    OBJECTS at = ActivityType BEFORE l
+
+    PROPERTIES newActivity(l, at) COLUMNS (at) HEADER name(at)
+    
+    OBJECTS act = Activity CUSTOM 'activities'
+    PROPERTIES(act) nameType, dueDate, textDateDuration, daysLeft, name, nameAssignedTo, description, done
+    PROPERTIES setDone(act),
+        editAct = edit(act) ON CHANGE {
+            SHOW activity OBJECTS a = act FLOAT;
+        },
+        deleteAct = DELETE(act)
+    ORDERS dueDate(act)
+    FILTERS object(act) = l,
+        NOT PREV(done(act))
+
+    PROPERTIES createOrderCustom(l)
+    
+//    OBJECTS o = Sales.Order PANEL
+//    PROPERTIES(o) date, nameCustomer, nameType, nameStatus
+//    FILTERS lead(o) = l
+
+    OBJECTS ol = Sales.OrderLine
+    PROPERTIES(ol) nameItem, numberServiceOrder, quantity, price, untaxedAmount, discount, discountPrice
+    //PROPERTIES(ol) NEW, DELETE GRID 
+    FILTERS lead(ol) = l
+
+    //    OBJECTS cmt = LeadComment CUSTOM 'comments'
+//    PROPERTIES id = VALUE(cmt)
+//    PROPERTIES(cmt) nameUser, textTimeDuration, dateTime, text = html
+//    PROPERTIES(cmt) edit ON CHANGE {
+//        SHOW editLeadComment OBJECTS c = cmt;
+//    },
+//        delete = DELETE
+//    ORDERS id DESC
+//    FILTERS lead(cmt) = l
+//
+//    PROPERTIES inputComment(), newComment(l)
+//
+//    EVENTS ON APPLY { newComment(l); }
+
+//    OBJECTS stch = LeadStatusChange
+//    PROPERTIES(stch) READONLY dateTime, nameUser, hoursBefore, nameStatus, hoursAfter
+//    FILTERS lead(stch) = l
+
+    EDIT Lead OBJECT l    
+    
+//    PROPERTIES inputComment(), newComment(l)
+//    EVENTS ON APPLY { newComment(l); }
+;
+
+DESIGN client {
+    height = 800;
+    OBJECTS {
+        NEW statusPane FIRST {
+            horizontal = TRUE;
+            alignment = STRETCH;
+            NEW statusActions {
+                horizontal = TRUE;
+                flex = 1;
+                NEW primaryActions {
+                    horizontal = TRUE;
+                    MOVE PROPERTY(setLost(l)) { valueClass = 'btn-danger'; caption = 'Отказ'; }
+                    MOVE PROPERTY(newActivity(l, at));
+                    MOVE PROPERTY(createOrderCustom(l)) { caption = 'Заказ'; }
+                }
+                NEW secondaryActions {
+                    horizontal = TRUE;
+                }
+            }
+            NEW statusContainer {
+                fill = 1;
+                NEW status {
+                    alignment = END;
+                    horizontal = TRUE;
+                    MOVE PROPERTY(nameStatus(l));
+                    MOVE PROPERTY(nameLostReason(l)) { caption = ''; }
+                }
+            }
+        }
+        MOVE PROPERTY(name(l)) { fontSize = 16; caption = 'Лид'; }
+        NEW pane {
+            horizontal = TRUE;
+          //  fill = 1;
+            NEW leadPane {
+              //  fill = 2;
+                width = 800;
+                NEW header {
+                    alignment = STRETCH;
+                    NEW main {
+                        horizontal = TRUE;
+                        alignment = STRETCH;
+                        REMOVE PROPERTY(id(l));
+                        REMOVE PROPERTY(dateTime(l));
+//                        MOVE PROPERTY(expectedRevenue(l));
+//                        MOVE PROPERTY(expectedClosing(l));
+                        MOVE PROPERTY(nameType(l));
+                    }
+                    NEW params {
+                        horizontal = TRUE;
+                        alignment = STRETCH;
+                        fill = 1;
+                        //lines = 3;
+                        NEW items {
+                            fill = 1;
+                            caption = 'Продукт';
+                            MOVE PROPERTY(nameItem(l)) { caption = ''; };
+                        }
+                        NEW client {
+                            fill = 1;
+                            caption = 'Клиент';
+                            MOVE PROPERTY(nameCustomer(l)) { caption = 'Поиск в базе'; };
+                            MOVE PROPERTY(nameClient(l));
+                            MOVE PROPERTY(email(l));
+                            MOVE PROPERTY(phone(l));
+                            MOVE PROPERTY(instagram(l));
+                            MOVE PROPERTY(telegram(l));
+                        }
+                        NEW marketing {
+                            fill = 1;
+                            caption = 'Маркетинг';
+                            MOVE PROPERTY(nameCampaign(l));
+                            MOVE PROPERTY(nameMedium(l));
+                            MOVE PROPERTY(nameSource(l));
+                        }
+                    }
+                    NEW statistic {
+                        caption = '';
+                        horizontal = TRUE;
+                        alignment = STRETCH;
+                        MOVE PROPERTY(nameSalesPerson(l)) { flex = 1;};
+                        MOVE PROPERTY(namePriority(l)) { flex = 1;};
+                        MOVE PROPERTY(probability(l)) { flex = 1;};
+                    }
+                    MOVE PROPERTY(tags(l));
+                    NEW description {
+                        caption = 'Description';
+                        fill = 1;
+                        MOVE PROPERTY(description(l)) { caption = ''; fill = 1; }
+                    }
+                }
+                NEW details {
+                    tabbed = TRUE;
+                    fill = 1;
+                    NEW activities {
+                        showIf = countActivityTypes();
+                        alignment = STRETCH;
+                        caption = badged('Activities', countOpenedActivity(l));
+                        MOVE GRID(act) {
+                            width = 800;
+                            flex = 0;
+                        }
+                        REMOVE BOX(act);
+                    }
+                    NEW otherInformation {
+                        caption = 'Other information';
+                        lines = 2;
+                        NEW address {
+                            alignment = STRETCH;
+                            REMOVE PROPERTY(address(l));
+                            REMOVE PROPERTY(city(l));
+//                            REMOVE PROPERTY(state(l));
+//                            REMOVE PROPERTY(zip(l));
+                        }
+                    }
+                    NEW history {
+                        caption = badged('History', countHistories(l));
+                        fill = 1;
+                        horizontal = TRUE;
+                        MOVE BOX(leadl) {
+                            fill = 2;
+                            caption = '';
+                            PROPERTY(description(leadl)) { valueHeight = 18; }
+                        }
+                      //  MOVE PROPERTY(pdescription) { panelCaptionVertical = TRUE; fill = 1; }
+                    }
+//                    MOVE BOX(stch) {
+//                        caption = badged('Status change', countStatusChange(l));
+//                    }
+                }
+            }
+            NEW orderPane {
+                width = 800;
+                fill = 1;
+                showIf = countOrders(l);
+//                NEW orderHeader {
+//                    MOVE PROPERTY(nameType(o));
+//                    MOVE PROPERTY(date(o));
+//                    MOVE PROPERTY(nameStatus(o));
+//                    MOVE PROPERTY(nameCustomer(o));
+//                }
+                NEW orderLine {
+                    fill = 1;
+                    MOVE BOX(ol);
+                }
+            }
+//            NEW rightPane {
+//                fill = 1;
+//                width = 200;
+//                NEW relatedDoc {
+//                    tabbed = TRUE;
+//                    alignment = STRETCH;
+//                }
+//                NEW comments {
+//                    fill = 1;
+//                    caption = badged('Comments', countComment(l));
+//                    NEW inputComment {
+//                        horizontal = TRUE;
+//                        alignment = STRETCH;
+//                        MOVE PROPERTY(inputComment()) {
+//                            valueHeight = -1;
+//                            fill = 1;
+//                        }
+//                        MOVE PROPERTY(newComment(l)) {
+//                            alignment = STRETCH;
+//                        }
+//                    }
+//                    MOVE GRID(cmt) {
+//                        height = 200;
+//                        width = 400;
+//                        fill = 1;
+//                    }
+//                    REMOVE BOX(cmt);
+//                }             
+//            }
+        }
+    }
+}
+
+//WHEN CHANGED(items(Lead l)) DO {
+//    LOCAL n = ISTRING();
+//    n() <- replace(name(l), (OVERRIDE PREV(items(l)), ''), '');
+//    name(l) <- CONCAT ' ', items(l), n();
+//}
+
+customCreateLeadStatus() += TRUE;
+
+overCreateLeadStatus () + {
+    INPUT id = LONG DO {
+        NEWSESSION {
+            NEW ll = Lead {
+                FOR LONG(LeadStatus s AS LeadStatus) = id DO
+                    status(ll) <- s;
+                order(currentUser(), ll) <- -LONG(ll);
+                SHOW client OBJECTS l = ll FLOAT;
+            }
+        }
+    }
+}

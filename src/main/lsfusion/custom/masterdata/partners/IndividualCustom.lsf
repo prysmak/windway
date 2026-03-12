@@ -1,0 +1,27 @@
+MODULE IndividualCustom;
+
+REQUIRE PartnertCustom, Individual;
+
+NAMESPACE MasterData;
+
+newIndividualCustom 'Добавить клиента' () {
+    NEWSESSION NESTED {
+        NEW c = Individual {
+            firstName(c) <- ISTRING[30](nameFilter());
+            phone(c) <- phoneFilter();
+            email(c) <- emailFilter();
+        }
+        APPLY;
+    }
+}
+
+EXTEND FORM dialogPartners
+    PROPERTIES newIndividualCustom()
+;
+
+DESIGN dialogPartners {
+    action {
+        MOVE PROPERTY(newIndividualCustom()); 
+    }
+    REMOVE PROPERTY(newIndividual());
+}

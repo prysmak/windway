@@ -1,0 +1,300 @@
+MODULE ServiceOrder;
+
+REQUIRE Doc, MetaNumerator, Input, DateUtils, FileUtils, Comments,
+BomNested, LocationEmployee,
+ServiceOrderType, ServicesSettings;
+
+NAMESPACE Services;
+
+CLASS ServiceOrder 'Service order';
+
+@defineDocStatus(serviceOrder, 'Service order status');
+
+type 'Type' = DATA ServiceOrderType (ServiceOrder) NONULL;
+nameType 'Type' (ServiceOrder o) = name(type(o));
+
+WHEN LOCAL SET(ServiceOrder o IS ServiceOrder) AND NOT CHANGED(type(o)) DO type(o) <- defaultServiceOrderType();
+
+scheduledDateTime 'Start date' = DATA DATETIME (ServiceOrder) IN id;
+scheduledDateTime(ServiceOrder o) <- currentDateTime() WHEN SET(o IS ServiceOrder);
+@defineDateTimeAggregation(ServiceOrder, scheduled, '(scheduled)');
+
+@defineNumberType(ServiceOrder);
+
+numberDate 'Description' (ServiceOrder o) = number(o) + ' (' + scheduledDateTime(o) + ')' IN id;
+
+item '{Item}' = DATA Item (ServiceOrder);
+nameItem '{Item}' (ServiceOrder m) = name(item(m));
+
+uom (ServiceOrder o) = uom(item(o));
+nameUom 'UoM' (ServiceOrder m) = name(uom(m));
+
+responsible = DATA Employee (ServiceOrder);
+nameResponsible 'Responsible' (ServiceOrder o) = MasterData.name(responsible(o));
+
+responsible(ServiceOrder o) <- currentUser() IF currentUser() IS Employee WHEN SET(o IS ServiceOrder);
+
+// bom
+//bom 'Bill of Materials' = DATA Bom (ServiceOrder);
+//descriptionBom 'Bill of Materials' (ServiceOrder m) = description(bom(m));
+//CONSTRAINT bom(ServiceOrder m) AND NOT item(m) = item(bom(m))
+//    CHECKED BY bom[ServiceOrder]
+//    MESSAGE 'Service order BOM item must be equal to production order item';
+//
+//WHEN LOCAL CHANGED(item(ServiceOrder o)) AND NOT CHANGED(bom(o)) AND defaultBom(item(o)) DO
+//    bom(o) <- defaultBom(item(o));
+
+company = DATA Company (ServiceOrder);
+nameCompany 'Company' (ServiceOrder m) = name(company(m));
+WHEN LOCAL SET(ServiceOrder o IS ServiceOrder) AND NOT CHANGED(company(o)) DO company(o) <- defaultCompany();
+
+materialsLocation 'Materials location' = DATA Location (ServiceOrder);
+nameMaterialsLocation 'Materials location' (ServiceOrder m) = name(materialsLocation(m));
+WHEN LOCAL SETCHANGED(type(ServiceOrder mo)) AND NOT materialsLocation(mo) DO materialsLocation(mo) <- materialsLocation(type(mo));
+CONSTRAINT SETCHANGED(materialsLocation(ServiceOrder o)) AND internalUse(materialsLocation(o)) CHECKED BY materialsLocation[ServiceOrder]
+    MESSAGE 'The selected location is for internal use';
+
+//unbuild 'Unbuild' (ServiceOrder mo)= unbuild(type(mo));
+
+note 'Note' = DATA ISTRING (ServiceOrder) CHARWIDTH 20;
+
+// consumed
+CLASS ConsumedLine 'Materials';
+
+serviceOrder = DATA ServiceOrder (ConsumedLine) NONULL DELETE;
+
+countConsumedLine 'Material lines' (ServiceOrder m) = GROUP SUM 1 IF serviceOrder(ConsumedLine l) = m MATERIALIZED;
+index '№' = PARTITION SUM 1 ORDER ConsumedLine l BY serviceOrder(l) IN id MATERIALIZED CHARWIDTH 3;
+
+item '{Item}' = DATA Item (ConsumedLine);
+nameItem '{Item}' (ConsumedLine l) = name(item(l));
+idBarCodeItem 'Barcode' (ConsumedLine l) = idBarCode(item(l));
+idItem '{ID}' (ConsumedLine l) = id(item(l));
+
+description 'Description' = DATA ISTRING (ConsumedLine);
+
+uom (ConsumedLine l) = uom(item(l));
+nameUom 'UoM' (ConsumedLine l) = name(uom(l));
+
+toConsume 'To consume' = DATA NUMERIC[16,3] (ConsumedLine);
+
+toConsume 'To consume' (ServiceOrder o) = GROUP SUM toConsume(ConsumedLine l) IF serviceOrder(l) = o AND item(l) = item(o) MATERIALIZED;
+
+//// finished
+//CLASS FinishedLine 'Finished products';
+//
+//serviceOrder = DATA ServiceOrder (FinishedLine) NONULL DELETE;
+//
+//countFinishedLine 'Product lines' (ServiceOrder m) = GROUP SUM 1 IF serviceOrder(ConsumedLine l) = m MATERIALIZED;
+//index '№' = PARTITION SUM 1 ORDER FinishedLine l BY serviceOrder(l) IN id MATERIALIZED CHARWIDTH 3;
+//
+//item '{Item}' = DATA Item (FinishedLine);
+//nameItem '{Item}' (FinishedLine l) = name(item(l));
+//idBarCodeItem 'Barcode' (FinishedLine l) = idBarCode(item(l));
+//idItem '{ID}' (FinishedLine l) = id(item(l));
+//
+//nameConsumedItem 'Materials' (ServiceOrder o) =
+//    GROUP CONCAT nameItem(ConsumedLine cl), ' / ' ORDER nameItem(cl) BY serviceOrder(cl) CHARWIDTH 14;
+//
+//uom 'UoM' = DATA Uom (FinishedLine);
+//nameUom 'UoM' (FinishedLine l) = name(uom(l));
+//WHEN LOCAL CHANGED(item(FinishedLine l)) DO uom(l) <- uom(item(l));
+//
+//toProduce '{Manufacture}' = DATA NUMERIC[16,3] (FinishedLine);
+//
+//costRatio 'Cost ratio' = DATA NUMERIC[18,5] (FinishedLine);
+//
+//costRatio (ServiceOrder o) = GROUP SUM costRatio(FinishedLine l) IF serviceOrder(l) = o MATERIALIZED;
+//normalizedCostRatio (FinishedLine l) = IF costRatio(serviceOrder(l)) THEN
+//    costRatio(l) / costRatio(serviceOrder(l)) ELSE
+//    (1.0 IF item(l) = item(serviceOrder(l)));
+//
+//toProduce '{Manufacture}' (ServiceOrder o) = GROUP SUM toProduce(FinishedLine l) IF serviceOrder(l) = o AND item(l) = item(o) MATERIALIZED;
+
+// line properties
+status (ConsumedLine l) = status(serviceOrder(l));
+nameStatus 'Status' (ConsumedLine l) = name(status(l));
+
+nameType 'Type' (ConsumedLine l) = nameType(serviceOrder(l));
+scheduledDateTime 'Start date' (ConsumedLine l) = scheduledDateTime(serviceOrder(l)) IN id;
+scheduledDate 'Start date' (ConsumedLine l) = scheduledDate(serviceOrder(l));
+number 'Number' (ConsumedLine l) = number(serviceOrder(l)) IN id;
+
+responsible (ConsumedLine l) = responsible(serviceOrder(l));
+nameResponsible 'Responsible' (ConsumedLine l) = MasterData.name(responsible(l));
+
+FORM serviceOrder 'Мероприятие'
+    OBJECTS o = ServiceOrder PANEL
+    PROPERTIES(o) READONLYIF readonly(o)
+    nameType, scheduledDateTime, number, nameCompany, nameResponsible,
+        nameItem, 
+        nameMaterialsLocation,
+        note
+
+    OBJECTS c = ConsumedLine
+    PROPERTIES(c) READONLYIF readonly(o)
+    index READONLY, nameItem, description, nameUom, idBarCodeItem, idItem, toConsume, NEW, DELETE
+    FILTERS serviceOrder(c) = o
+
+    EDIT ServiceOrder OBJECT o
+;
+
+DESIGN serviceOrder {
+    caption = badged('Мероприятие', number(o) + '(' + scheduledDateTime(o) + ')');
+    OBJECTS {
+        NEW header {
+            alignment = STRETCH;
+            horizontal = TRUE;
+            NEW headerLeft {
+                MOVE PROPERTY(nameType(o)) { notNull = TRUE; };
+                MOVE PROPERTY(nameItem(o));
+                MOVE PROPERTY(scheduledDateTime(o));
+                MOVE PROPERTY(number(o)) { notNull = TRUE; }
+                MOVE PROPERTY(nameCompany(o));
+                MOVE PROPERTY(nameResponsible(o));
+            }
+            NEW headerRight {
+                fill = 1;
+            }
+            NEW relatedDoc {
+                fill = 1;
+                tabbed = TRUE;
+            }
+        }
+        MOVE PROPERTY(note(o));
+        NEW details {
+            fill = 1;
+            tabbed = TRUE;
+            NEW consumed {
+                caption = 'Materials';
+                MOVE PROPERTY(nameMaterialsLocation(o));
+                NEW consumedPane {
+                    horizontal = TRUE;
+                    fill = 1;
+                    MOVE BOX(c) { caption = ''; }
+                    NEW consumedLinesTab {
+                        fill = 0.3;
+                        tabbed = TRUE;
+                    }
+                }
+            }
+        }
+    }
+    TOOLBARBOX {
+        NEW footer FIRST {
+            horizontal = TRUE;
+        }
+    }
+}
+
+//edit (FinishedLine l) + { edit(serviceOrder(l)); }
+edit (ConsumedLine l) + { edit(serviceOrder(l)); }
+
+@defineDocHistoryHeader(serviceOrder, scheduledDateTime);
+@defineHistoryProperty(serviceOrder, item, 'Item', nameItem);
+@defineHistoryProperty(serviceOrder, company, 'Company', nameCompany);
+@defineHistoryProperty(serviceOrder, responsible, 'Responsible', nameResponsible);
+
+//@defineHistoryProperty(serviceOrder, toManufacture, '{Manufacture}'){
+//    @defineHistoryProperty(serviceOrder, toManufacture, '{Manufacture}', toManufacture){
+//    WHEN CHANGED(toManufacture(ServiceOrder let)) AND NOT DROPPED(let IS ServiceOrder) AND NOT disableHistory() DO {
+//        NEW l = ServiceOrderHistory {
+//            serviceOrder(l) <- let;
+//            dateTime(l) <- currentDateTime();
+//            user(l) <- currentUser();
+//            computer(l) <- currentComputer();
+//            type(l) <- '{Manufacture}';
+//            description (l) <- CONCAT ' -> ', PREV(toManufacture(let)), (OVERRIDE ISTRING(toManufacture(let)), '');
+//        }
+//    }
+//};
+//};
+
+@defineDocHistoryLine(serviceOrder, ConsumedLine, item);
+@defineDocHistoryLineProperty(serviceOrder, ConsumedLine, toConsume, 'To consume', nameItem);
+
+background = ABSTRACT CASE COLOR (ServiceOrder);
+
+FORM serviceOrders 'Мероприятия'
+    OBJECTS o = ServiceOrder BACKGROUND background(o)
+    PROPERTIES(o) READONLYIF isReadonly()
+    number, scheduledDateTime, nameItem, 
+    nameType, nameResponsible
+//        toManufacture READONLY, 
+//        nameUom READONLY,
+//        nameMaterialsLocation,
+//        countConsumedLine READONLY, 
+//        countFinishedLine READONLY
+    PROPERTIES(o) NEWSESSION NEW, EDIT, DELETE DISABLEIF readonly(o)
+
+    LIST ServiceOrder OBJECT o
+;
+
+@extendFormEditable(serviceOrders);
+
+@defineDocObjectsForm(serviceOrders, o, 'План мероприятий');
+@defineDocStatusForm(serviceOrder, o);
+
+WHEN LOCAL SET(ServiceOrder o IS ServiceOrder) AND NOT CHANGED(materialsLocation(o)) AND countLocation() = 1 DO
+    materialsLocation(o) <- firstLocation();
+
+@defineHistoryForm(serviceOrder, serviceOrder, o);
+
+@defineObjectComments(serviceOrder, o, details);
+
+@defineObjectFiles(serviceOrder, o, 'Service order file');
+
+NAVIGATOR {
+    operations {
+        NEW serviceOrders;
+    }
+}
+
+// copy
+clone ABSTRACT LIST (ServiceOrder, ServiceOrder);
+
+clone(ServiceOrder to, ServiceOrder from) + {
+    type(to) <- type(from);
+
+    item(to) <- item(from);
+    company(to) <- company(from);
+    materialsLocation(to) <- materialsLocation(from);
+
+//    FOR serviceOrder(ConsumedLine ml) = from NEW ol = ConsumedLine DO {
+//        serviceOrder(ol) <- to;
+//        item(ol) <- item(ml);
+//        toConsume(ol) <- toConsume(ml);
+//    }
+
+//    FOR serviceOrder(FinishedLine ml) = from NEW ol = FinishedLine DO {
+//        serviceOrder(ol) <- to;
+//        item(ol) <- item(ml);
+//        uom(ol) <- uom(ml);
+//        toProduce(ol) <- toProduce(ml);
+//        costRatio(ol) <- costRatio(ml);
+//    }
+}
+
+copy 'Copy' (ServiceOrder from) {
+    NEWSESSION {
+        NEW to = ServiceOrder {
+            clone(to, from);
+            APPLY;
+            SHOW serviceOrder OBJECTS o = to DOCKED;
+        }
+    }
+}
+
+EXTEND FORM serviceOrder
+    PROPERTIES(o) copy
+;
+
+DESIGN serviceOrder {
+    secondaryActions {
+        MOVE PROPERTY(copy(o)) { valueClass = 'btn-secondary'; }
+    }
+}
+
+EXTEND FORM serviceOrders
+    PROPERTIES(o) copy TOOLBAR 
+;

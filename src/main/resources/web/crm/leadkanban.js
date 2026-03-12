@@ -89,18 +89,53 @@ function leadKanban() {
                         leadBody.classList.add("list-group-item");
                         leadContent.appendChild(leadBody);
 
-                        let leadCustomer = document.createElement("h6");
-                        leadCustomer.classList.add("lead-kanban-card-customer");
-                        leadCustomer.classList.add("card-title");
-                        leadCustomer.classList.add("text-body-secondary");
-                        leadCustomer.innerHTML = lead.nameCustomer;
-                        leadBody.appendChild(leadCustomer);
+                        let nameClient = document.createElement("h6");
+                        nameClient.classList.add("lead-kanban-card-client");
+                        nameClient.classList.add("card-title");
+                        nameClient.classList.add("text-body-secondary");
+                        nameClient.innerHTML = lead.nameClient;
+                        leadBody.appendChild(nameClient);
 
-                        let leadRevenue = document.createElement("div");
-                        leadRevenue.classList.add("lead-kanban-card-revenue");
-                        leadRevenue.classList.add("card-text");
-                        leadRevenue.innerHTML = lead.expectedRevenue;
-                        leadBody.appendChild(leadRevenue);
+                        let items = document.createElement("div");
+                        items.classList.add("lead-kanban-card-items");
+                        items.classList.add("card-text");
+                        items.innerHTML = lead.htmlItems;
+                        leadBody.appendChild(items);
+
+                        let activities = document.createElement("div");
+                        activities.classList.add("lead-kanban-card-activities");
+                        activities.classList.add("card-text");
+                        activities.innerHTML = lead.htmlActivities;
+                        leadBody.appendChild(activities);
+
+
+//                        let activities = document.createElement("table");
+//                        activities.classList.add("lead-kanban-card-activities");
+//                        activities.classList.add("list-group-item");
+//                        items.innerHTML = lead.htmlActivities;
+//                        leadContent.appendChild(activities);
+
+//                        let leadRevenue = document.createElement("div");
+//                        leadRevenue.classList.add("lead-kanban-card-revenue");
+//                        leadRevenue.classList.add("card-text");
+//                        leadRevenue.innerHTML = lead.expectedRevenue;
+//                        leadBody.appendChild(leadRevenue);
+
+//                        if (lead.jsonItems) {
+//                            let leadItems = document.createElement("li");
+//                            leadItems.classList.add("lead-kanban-card-items");
+//                            leadItems.classList.add("list-group-item");
+//                            for (const item of lead.jsonItems) {
+//                                let leadItem = document.createElement("span");
+//                                leadItem.classList.add("lead-kanban-card-item");
+//                                leadItem.classList.add("badge");
+//                                leadItem.classList.add("rounded-pill");
+//                                //leadTag.classList.add("text-bg-" + (tag.idColor ? tag.idColor : "secondary"));
+//                                leadItem.innerHTML = item.name;
+//                                leadItems.appendChild(leadItem);
+//                            }
+//                            leadContent.appendChild(leadItems);
+//                        }
 
                         if (lead.tags) {
                             let leadTags = document.createElement("li");
@@ -124,13 +159,13 @@ function leadKanban() {
                         leadSalesPerson.innerHTML = lead.nameSalesPerson;
                         leadContent.appendChild(leadSalesPerson);
 
-                        if (lead.expectedClosing) {
-                            let leadExpectedClosing = document.createElement("div");
-                            leadExpectedClosing.classList.add("lead-kanban-card-expected-closing");
-                            leadExpectedClosing.classList.add("card-footer");
-                            leadExpectedClosing.innerHTML = moment(lead.expectedClosing).toISOString(true).substring(0, 10);
-                            leadCard.appendChild(leadExpectedClosing);
-                        }
+//                        if (lead.expectedClosing) {
+//                            let leadExpectedClosing = document.createElement("div");
+//                            leadExpectedClosing.classList.add("lead-kanban-card-expected-closing");
+//                            leadExpectedClosing.classList.add("card-footer");
+//                            leadExpectedClosing.innerHTML = moment(lead.expectedClosing).toISOString(true).substring(0, 10);
+//                            leadCard.appendChild(leadExpectedClosing);
+//                        }
 
                         leadCard.lead = lead;
                         statusBody.appendChild(leadCard);

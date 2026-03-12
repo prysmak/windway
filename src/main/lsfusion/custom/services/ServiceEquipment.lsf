@@ -1,0 +1,56 @@
+MODULE ServiceEquipment;
+
+REQUIRE ServiceOrder, ServiceWork, Item;
+
+NAMESPACE Services;
+
+isEquipment 'Оборудование для услуг' = DATA BOOLEAN (Item);
+
+EXTEND FORM item 
+    PROPERTIES isEquipment(i)
+;
+
+EXTEND FORM items
+    PROPERTIES READONLY isEquipment(i)
+;
+
+DESIGN item {
+    column3 {
+        MOVE PROPERTY(isEquipment(i));
+    }
+}
+
+dataIn 'вкл' = DATA BOOLEAN (ServiceOrder, Item);
+
+in 'вкл' = DATA BOOLEAN (ServiceWork, Item);
+
+in (ServiceOrder o, Item i) = OVERRIDE dataIn(o, i), TRUE IF [GROUP SUM 1 IF in(ServiceWork sw, Item ii) BY serviceOrder(sw), ii](o, i);
+
+nameEquipments 'Оборудование' (ServiceOrder so) = GROUP CONCAT name(Item i) IF in(so, i), ', ' ORDER i;
+
+nameEquipments 'Оборудование' (ServiceWork sw) = GROUP CONCAT name(Item i) IF in(sw, i), ', ' ORDER i;
+
+EXTEND FORM serviceOrder
+    OBJECTS eq = Item
+    PROPERTIES in(o, eq), name(eq), in(sw, eq)
+    FILTERS isEquipment(eq)
+    FILTERGROUP include
+        FILTER 'вкл' in(o, eq) DEFAULT
+;
+
+DESIGN serviceOrder {
+    details {
+        NEW equipment {
+            caption = 'Оборудование';
+            MOVE BOX(eq) { caption = ''; }
+        }
+    }
+}
+
+EXTEND FORM serviceWorks
+    PROPERTIES READONLY nameEquipments(o)
+;
+
+EXTEND FORM serviceOrders
+    PROPERTIES READONLY nameEquipments(o)
+;

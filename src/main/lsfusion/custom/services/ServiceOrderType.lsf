@@ -1,0 +1,75 @@
+MODULE ServiceOrderType;
+
+REQUIRE ServicesSettings, Location;
+
+NAMESPACE Services;
+
+CLASS ServiceOrderType 'Services order type';
+
+name '{Name}' = DATA STRING[50] (ServiceOrderType) NONULL IN id;
+
+id '{ID}'= DATA STRING[20] (ServiceOrderType);
+serviceOrderType = GROUP AGGR ServiceOrderType t BY id(t);
+
+numerator 'Numerator' = DATA Numerator (ServiceOrderType);
+nameNumerator 'Numerator' (ServiceOrderType o) = name(numerator(o));
+
+materialsLocation 'Materials location' = DATA Location (ServiceOrderType);
+nameMaterialsLocation 'Materials location' (ServiceOrderType t) = name(materialsLocation(t));
+
+FORM serviceOrderType 'Services order type'
+    OBJECTS o = ServiceOrderType PANEL
+    PROPERTIES(o) name, id, nameNumerator, nameMaterialsLocation
+
+    EDIT ServiceOrderType OBJECT o;
+;
+
+DESIGN serviceOrderType {
+    OBJECTS {
+        NEW header {
+            horizontal = TRUE;
+            MOVE PROPERTY(name(o)) { charWidth = 30; }
+            MOVE PROPERTY(id(o));
+            MOVE PROPERTY(nameNumerator(o));
+        }
+        NEW pane {
+            lines = 3;
+            NEW default {
+                caption = 'Default';
+                MOVE PROPERTY(nameMaterialsLocation(o));
+            }
+            NEW otherInformation {
+                caption = 'Other information';
+            }
+        }
+        NEW tabbedPane {
+            fill = 1;
+            tabbed = TRUE;
+        }
+    }
+}
+
+FORM serviceOrderTypes 'Types of production orders'
+    OBJECTS o = ServiceOrderType
+    PROPERTIES(o) READONLY name, id
+
+    LIST ServiceOrderType OBJECT o;
+;
+
+EXTEND FORM options
+    OBJECTS ot = ServiceOrderType
+    PROPERTIES(ot) READONLY name, id
+    PROPERTIES(ot) NEWSESSION NEW, EDIT, DELETE
+;
+
+DESIGN options {
+    tabbedPane {
+        MOVE BOX(ot);
+    }
+}
+
+countServiceOrderTypes 'Number of types' () = GROUP SUM 1 IF r IS ServiceOrderType;
+firstServiceOrderType () = GROUP LAST ServiceOrderType t ORDER DESC t WHERE t IS ServiceOrderType;
+
+defaultServiceOrderType () = firstServiceOrderType()
+    IF countServiceOrderTypes() = 1;

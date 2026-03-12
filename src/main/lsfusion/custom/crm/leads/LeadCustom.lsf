@@ -1,0 +1,31 @@
+MODULE LeadCustom;
+
+REQUIRE Lead, PartnertCustom;
+
+NAMESPACE CRM;
+
+nameClient '{Name}' = DATA ISTRING[92] (Lead) CHARWIDTH 30;
+
+instagram 'Instagram' = DATA STRING[50] (Lead) CHARWIDTH 20;
+
+telegram 'Telegram' = DATA STRING[50] (Lead) CHARWIDTH 20;
+
+WHEN LOCAL SETCHANGED(customer(Lead l)) DO {
+    nameClient(l) <- name(customer(l));
+}
+
+WHEN LOCAL SETCHANGED(customer(Lead l)) AND phone(customer(l)) DO {
+    phone(l) <- phone(customer(l));
+}
+
+WHEN LOCAL SETCHANGED(customer(Lead l)) AND email(customer(l)) DO {
+    email(l) <- email(customer(l));
+}
+
+WHEN LOCAL SETCHANGED(customer(Lead l)) AND telegram(customer(l)) DO {
+    telegram(l) <- telegram(customer(l)) ;
+}
+
+WHEN LOCAL SETCHANGED(customer(Lead l)) AND instagram(customer(l)) DO {
+    instagram(l) <- instagram(customer(l)) ;
+}

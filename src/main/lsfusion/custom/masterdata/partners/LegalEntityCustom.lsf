@@ -1,0 +1,27 @@
+MODULE LegalEntityCustom;
+
+REQUIRE PartnertCustom, LegalEntity;
+
+NAMESPACE MasterData;
+
+newLegalEntityCustom 'Добавить юр.лицо' () {
+    NEWSESSION NESTED {
+        NEW c = LegalEntity {
+            name(c) <- ISTRING[30](nameFilter());
+            phone(c) <- phoneFilter();
+            email(c) <- emailFilter();
+        }
+        APPLY;
+    }
+}
+
+EXTEND FORM dialogPartners
+    PROPERTIES newLegalEntityCustom()
+;
+
+DESIGN dialogPartners {
+    action {
+        MOVE PROPERTY(newLegalEntityCustom());
+    }
+    REMOVE PROPERTY(newLegalEntity());
+}

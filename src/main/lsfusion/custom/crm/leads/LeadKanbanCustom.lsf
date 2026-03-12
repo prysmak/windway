@@ -1,0 +1,236 @@
+MODULE LeadKanbanCustom;
+
+REQUIRE LeadCustom, LeadMarketing, LeadItem, LeadLost, LeadPartner,
+        LeadCustomer, LeadCall, LeadEmail, LeadItemCustom,
+        LeadSalesOrder;
+
+PRIORITY MasterData;
+
+NAMESPACE CRM;
+
+leadStatuses () = JSON FROM id = LeadStatus s, name(s) WHERE s IS LeadStatus AND NOT closed(s) AND (allow(leadType(), s) OR NOT leadType())
+    ORDER sortingOrder(s), s;
+leadEmployees () = JSON FROM id = Employee e, name(e) WHERE name(e);
+
+jsonTags (Lead l) = JSON FROM name(LeadTag tg), idColor(tg) WHERE in(l, tg);
+
+name '{Name}' (Item i) = HTMLTEXT(MasterData.name(i));
+
+//jsonItems (Lead l) = JSON FROM name(LeadItem i), nameUom(i) WHERE in(l, i);
+
+htmlItems (Lead l) = HTMLTEXT(OVERRIDE nameItem(l), GROUP CONCAT ('<div>' + name(LeadItem i) + '</div>' ) IF  in(l, i), '' ORDER i);    
+
+order = DATA LONG (CustomUser, Lead);
+currentOrder (Lead l) =  order(currentUser(), l);
+
+activities (Lead l) = 
+    '<table>' + 
+        (GROUP CONCAT ('<tr style="border: 1px solid #C4C4C4>' + (CONCAT '',
+        '<td>' + name(Activity a) + '</td>',
+        '<td>' + dateTimeToDateTime(dueDate(a), time(a)) + '</td>'
+        ) + '</tr>') IF object(a) = l, '' ORDER l) 
+    + '</table>'
+;
+
+htmlActivities (Lead l) =
+        HTMLTEXT(GROUP CONCAT ('<div>' + (CONCAT ' - ',
+            nameType(Activity a),
+            dateTimeToDateTime(dueDate(a), time(a)))
+            + '</div>' ) IF object(a) = l AND opened(a), '' ORDER l)
+;
+
+
+customCreateLeadStatus = ABSTRACT BOOLEAN ();
+overCreateLeadStatus ABSTRACT LIST ();
+
+createLeadStatus() {
+    IF customCreateLeadStatus() THEN {
+        overCreateLeadStatus();
+    }
+    ELSE
+        INPUT id = LONG DO {
+            NEWSESSION {
+                NEW ll = Lead {
+                    FOR LONG(LeadStatus s AS LeadStatus) = id DO
+                        status(ll) <- s;
+                    order(currentUser(), ll) <- -LONG(ll);
+                    SHOW lead OBJECTS l = ll DOCKED;
+                }
+            }
+        }
+}
+
+EXTEND FORM leads
+    OBJECTS ll = Lead CUSTOM 'leadKanban'
+    HEADER JSON FROM employees = leadEmployees(), statuses = leadStatuses()
+    PROPERTIES(ll) name = idName,
+        tags = jsonTags,
+        nameType,
+        nameClient,                       
+        expectedRevenue,
+        namePriority,
+        htmlItems,
+//        jsonItems,
+        htmlActivities,
+        status ON CHANGE {
+            INPUT ln = LONG DO
+                FOR LONG(LeadStatus ts AS LeadStatus) = ln DO
+                    status(ll) <- ts;
+                    ELSE
+                status(ll) <- NULL;
+        },
+        idColorPriority,
+        nameSalesPerson,
+        currentOrder ON CHANGE {
+            INPUT ord = INTEGER DO order(currentUser(), ll) <- ord;
+        }
+
+    ORDERS status(ll), currentOrder(ll)
+    FILTERS opened(ll)
+
+    FILTERS [FILTER leads.l](ll)
+
+    PROPERTIES() createLeadStatus
+
+    PROPERTIES(ll) PANEL pname = name, pnameStatus = nameStatus READONLY, pnameType = nameType,
+        pnamePriority = namePriority, pprobability = probability, pnameCustomer = nameCustomer,
+        pnameClient = nameClient, pphone = phone, pemail = email, pinstagram = instagram, ptelegram = telegram,
+        pnameCampaign = nameCampaign, pnameMedium = nameMedium, pnameSource = nameSource, phtmlActivities = htmlActivities READONLY,
+        pdescription = description, psetLost = setLost, pnameItem = nameItem, //pitems = items, //pjsonItems = jsonItems,
+        edit = EDIT NEWSESSION, delete = DELETE
+    PROPERTIES apply()
+
+    OBJECTS at = ActivityType //BEFORE ll
+
+    PROPERTIES PANEL pnewActivity = newActivity(ll, at) COLUMNS (at) HEADER name(at)
+    PROPERTIES PANEL pnameLostReason = nameLostReason(ll) SHOWIF status(ll) = lostLeadStatus() SELECT 'dropdown'
+    
+//    OBJECTS act = Activity // CUSTOM 'activities'
+//    PROPERTIES(act) nameType, dueDate, textDateDuration, daysLeft, name, nameAssignedTo, description, done
+//    PROPERTIES setDone(act),
+//        editAct = edit(act) ON CHANGE {
+//            SHOW activity OBJECTS a = act FLOAT;
+//        },
+//        deleteAct = DELETE(act)
+//    ORDERS dueDate(act)
+//    FILTERS object(act) = ll,
+//        NOT PREV(done(act))
+
+;
+
+DESIGN leads {
+    tabbedPane {
+        NEW kanban FIRST {
+            caption = 'Kanban';
+            MOVE GRID(ll) {
+                size = (800, 400);
+                fill = 1;
+
+                NEW statusPanel FIRST {
+                    horizontal = TRUE;
+                    alignment = STRETCH;
+                    NEW statusActions {
+                        horizontal = TRUE;
+                        flex = 1;
+                        NEW primaryActions {
+                            horizontal = TRUE;
+                            MOVE PROPERTY(psetLost) { valueClass = 'btn-danger'; caption = 'Отказ'; }
+                            MOVE PROPERTY(pnewActivity);
+                        }
+                        NEW secondaryActions {
+                            horizontal = TRUE;
+                        }
+                    }
+                    NEW statusContainer {
+                        fill = 1;
+                        NEW status {
+                            alignment = END;
+                            horizontal = TRUE;
+                            MOVE PROPERTY(pnameStatus);
+                            MOVE PROPERTY(pnameLostReason) { caption = ''; }
+                        }
+                    }
+                }
+                MOVE PROPERTY(pname) { fontSize = 16; caption = 'Лид'; }
+                NEW dataPanel {
+                    horizontal = TRUE;
+                    fill = 1;
+                    NEW leadPane {
+                        fill = 1;
+                        NEW header {
+                            alignment = STRETCH;
+                            MOVE PROPERTY(pnameType);
+                            NEW params {
+                                horizontal = TRUE;
+                                alignment = STRETCH;
+                                fill = 1;
+                                NEW items {
+                                    fill = 1;
+                                    caption = 'Продукт';
+                                    MOVE PROPERTY(pnameItem) { caption = ''; };
+                                }
+                                NEW client {
+                                    fill = 1;
+                                    caption = 'Клиент';
+                                    MOVE PROPERTY(pnameCustomer) { caption = 'Поиск в базе';}
+                                    MOVE PROPERTY(pnameClient);
+                                    MOVE PROPERTY(pemail);
+                                    MOVE PROPERTY(pphone);
+                                    MOVE PROPERTY(pinstagram);
+                                    MOVE PROPERTY(ptelegram);
+                                }
+                                NEW marketing {
+                                    fill = 1;
+                                    caption = 'Маркетинг';
+                                    MOVE PROPERTY(pnameCampaign);
+                                    MOVE PROPERTY(pnameMedium);
+                                    MOVE PROPERTY(pnameSource);
+                                }
+                            }
+                            NEW statistic {
+                                caption = '';
+                                horizontal = TRUE;
+                                alignment = STRETCH;
+                                MOVE PROPERTY(pnamePriority) { flex = 1;};
+                                MOVE PROPERTY(pprobability) { flex = 1;};
+                            }
+                            MOVE PROPERTY(phtmlActivities) { caption = 'Контакты'; };
+                            MOVE PROPERTY(pdescription) {
+                                size = (300, 120);
+                                panelCaptionVertical = TRUE;
+                                alignment = STRETCH;
+                            }
+                        }
+//                        NEW activities {
+//                            showIf = countActivityTypes();
+//                            alignment = STRETCH;
+//                            MOVE GRID(act) {
+//                                width = 800;
+//                                flex = 0;
+//                            }
+//                            REMOVE BOX(act);
+//                        }
+                    }
+                }
+                
+                NEW panelActions {
+                    horizontal = TRUE;
+                    MOVE PROPERTY(edit) { fill = 1; }
+                    MOVE PROPERTY(delete) { fill = 1; }
+                    MOVE PROPERTY(apply())  { fill = 1; caption = 'Сохранить'; };
+                    alignment = STRETCH;
+                }
+            }
+            REMOVE PROPERTY(createLeadStatus());
+            REMOVE BOX(ll);
+        }
+    }
+}
+
+// change interval
+onWebClientInit() + {
+    onWebClientInit('dragula.js') <- 1;
+    onWebClientInit('dragula.css') <- 1;
+    onWebClientInit('leadkanban.js') <- 2;
+    onWebClientInit('leadkanban.css') <- 2;
+}

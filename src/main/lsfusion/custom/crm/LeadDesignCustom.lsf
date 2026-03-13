@@ -46,14 +46,14 @@ FORM client
 
     PROPERTIES createOrderCustom(l)
     
-//    OBJECTS o = Sales.Order PANEL
-//    PROPERTIES(o) date, nameCustomer, nameType, nameStatus
-//    FILTERS lead(o) = l
+    OBJECTS o = Sales.Order PANEL
+    PROPERTIES(o) SHOWIF countOrders(l) date, nameCustomer, nameType, nameStatus
+    FILTERS lead(o) = l
 
     OBJECTS ol = Sales.OrderLine
-    PROPERTIES(ol) nameItem, numberServiceOrder, quantity, price, untaxedAmount, discount, discountPrice
-    //PROPERTIES(ol) NEW, DELETE GRID 
-    FILTERS lead(ol) = l
+    PROPERTIES(ol) SHOWIF countOrders(l) nameItem, numberServiceOrder, quantity, price, untaxedAmount, discount, discountPrice
+    PROPERTIES(ol) SHOWIF countOrders(l) NEW, DELETE GRID 
+    FILTERS order(ol) = o
 
     //    OBJECTS cmt = LeadComment CUSTOM 'comments'
 //    PROPERTIES id = VALUE(cmt)
@@ -212,13 +212,12 @@ DESIGN client {
             NEW orderPane {
                 width = 800;
                 fill = 1;
-                showIf = countOrders(l);
-//                NEW orderHeader {
-//                    MOVE PROPERTY(nameType(o));
-//                    MOVE PROPERTY(date(o));
-//                    MOVE PROPERTY(nameStatus(o));
-//                    MOVE PROPERTY(nameCustomer(o));
-//                }
+                NEW orderHeader {
+                    MOVE PROPERTY(nameType(o));
+                    MOVE PROPERTY(date(o));
+                    MOVE PROPERTY(nameStatus(o));
+                    MOVE PROPERTY(nameCustomer(o));
+                }
                 NEW orderLine {
                     fill = 1;
                     MOVE BOX(ol);

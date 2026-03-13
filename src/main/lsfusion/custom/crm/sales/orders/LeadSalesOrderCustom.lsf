@@ -1,11 +1,12 @@
 MODULE LeadSalesOrderCustom;
 
-REQUIRE LeadSalesOrder, LeadItemCustom, ItemSales, LeadCustom;
+REQUIRE LeadSalesOrder, LeadItemCustom, ItemSales, LeadCustom, System;
 
 NAMESPACE CRM;
 
 saleOrderType 'Тип заявки' = DATA Sales.OrderType (LeadType);
 nameSaleOrderType 'Тип заявки' (LeadType t) = name(saleOrderType(t));
+countOrderss (Lead l) = GROUP SUM 1 IF lead(Order o) = l;
 
 lead = DATA Lead (OrderLine);
 
@@ -58,8 +59,9 @@ createOrderCustom 'Create Order' (Lead l) {
             APPLY;
         } 
     
-    IF customer(l) THEN //   NEWSESSION {
+    IF customer(l) THEN  //NEWSESSION {
         newOrderCustom(l);
         //APPLY;
-   // }
+    //}
+   // formRefresh();
 }

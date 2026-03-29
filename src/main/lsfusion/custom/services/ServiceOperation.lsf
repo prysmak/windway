@@ -4,21 +4,21 @@ REQUIRE ServicesSettings;
 
 NAMESPACE Services;
 
-CLASS ServiceOperation 'Services operation';
+CLASS Operation 'Services operation';
 
-name '{Name}' = DATA STRING[50] (ServiceOperation) NONULL IN id;
+name '{Name}' = DATA STRING[50] (Operation) NONULL IN id;
 
-id '{ID}'= DATA STRING[20] (ServiceOperation);
-serviceOperation = GROUP AGGR ServiceOperation t BY id(t);
+id '{ID}'= DATA STRING[20] (Operation);
+serviceOperation = GROUP AGGR Operation t BY id(t);
 
-FORM serviceOperation 'Services operation'
-    OBJECTS o = ServiceOperation PANEL
+FORM operation 'Services operation'
+    OBJECTS o = Operation PANEL
     PROPERTIES(o) name, id
 
-    EDIT ServiceOperation OBJECT o;
+    EDIT Operation OBJECT o;
 ;
 
-DESIGN serviceOperation {
+DESIGN operation {
     OBJECTS {
         NEW header {
             horizontal = TRUE;
@@ -38,15 +38,15 @@ DESIGN serviceOperation {
     }
 }
 
-FORM serviceOperations 'Types of production orders'
-    OBJECTS o = ServiceOperation
+FORM operations 'Types of production orders'
+    OBJECTS o = Operation
     PROPERTIES(o) READONLY name, id
 
-    LIST ServiceOperation OBJECT o;
+    LIST Operation OBJECT o;
 ;
 
 EXTEND FORM options
-    OBJECTS oo = ServiceOperation
+    OBJECTS oo = Operation
     PROPERTIES(oo) READONLY name, id
     PROPERTIES(oo) NEWSESSION NEW, EDIT, DELETE
 ;
@@ -57,9 +57,9 @@ DESIGN options {
     }
 }
 
-countServiceOperations 'Number of types' () = GROUP SUM 1 IF r IS ServiceOperation;
-firstServiceOperation () = GROUP LAST ServiceOperation t ORDER DESC t WHERE t IS ServiceOperation;
+countOperations 'Number of types' () = GROUP SUM 1 IF r IS Operation;
+firstOperation () = GROUP LAST Operation t ORDER DESC t WHERE t IS Operation;
 
-defaultServiceOperation () = firstServiceOperation()
-    IF countServiceOperations() = 1;
+defaultServiceOperation () = firstOperation()
+    IF countOperations() = 1;
 

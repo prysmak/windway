@@ -4,12 +4,12 @@ REQUIRE ServiceOrder, ServiceWork, SalesOrder;
 
 NAMESPACE Sales;
 
-serviceOrder = DATA ServiceOrder (OrderLine);
+serviceOrder = DATA Services.Order (OrderLine);
 numberServiceOrder 'Мероприятие' (OrderLine ol) = number(serviceOrder(ol));
 
-countOrderLines 'Кол-во участников' (ServiceOrder so) = GROUP SUM 1 IF serviceOrder(OrderLine ol) = so;
+countOrderLines 'Кол-во участников' (Services.Order so) = GROUP SUM 1 IF serviceOrder(OrderLine ol) = so;
 
-nameOrderLines 'Участники' (ServiceOrder so) = GROUP CONCAT name(customer(order(OrderLine l))) IF serviceOrder(l) = so, ', ' ORDER l;
+nameOrderLines 'Участники' (Services.Order so) = GROUP CONCAT name(customer(order(OrderLine l))) IF serviceOrder(l) = so, ', ' ORDER l;
 
 CONSTRAINT SETCHANGED(serviceOrder(OrderLine ol)) AND NOT item(serviceOrder(ol)) = item(ol)
     CHECKED BY serviceOrder[OrderLine]
@@ -21,19 +21,37 @@ EXTEND FORM order
 
 in 'Отм' = DATA BOOLEAN (OrderLine, ServiceWork);
 
+FORM serviceOrderOrderLines 'Выбор участника'
+    OBJECTS sw = ServiceWork
+    
+    OBJECTS l = Sales.OrderLine
+    PROPERTIES nameCustomer(l) BACKGROUND (RGB(0,255,255) IF in(l, sw)) ON CHANGE {
+        in(l, sw) <- NOT in(l, sw);
+    }
+    FILTERS serviceOrder(l) = serviceOrder(sw)
+;
+
+DESIGN serviceOrderOrderLines {
+    BOX(l) { caption = '';}
+    PROPERTY(nameCustomer(l)) { caption = 'Имя';}
+    REMOVE TOOLBARBOX(l);
+}
+
 totalDuration 'Участие, часов' (OrderLine ol) = GROUP SUM duration(ServiceWork sw) IF in(ol, sw);
 
 countOrderLines 'Кол-во участников' (ServiceWork sw) = GROUP SUM 1 IF in(OrderLine l, sw);
 
-nameOrderLines 'Участники' (ServiceWork sw) = GROUP CONCAT name(customer(order(OrderLine l))) IF in(l, sw), ', ' ORDER l;
+nameOrderLines 'Участники' (ServiceWork sw) = GROUP CONCAT name(customer(Sales.order(OrderLine l))) IF in(l, sw) AND serviceOrder(l) = serviceOrder(sw), ', ' ORDER l;
 
-EXTEND FORM serviceOrder
+EXTEND FORM Services.order
+    PROPERTIES nameOrderLines(sw) ON CHANGE { SHOW serviceOrderOrderLines OBJECTS  sw = sw; }
+    
     OBJECTS ol = OrderLine
-    PROPERTIES nameStatus 'Status' = nameStatus(order(ol)), nameCustomer 'Customer' = nameCustomer(order(ol)), quantity(ol), untaxedAmount(ol), in(ol, sw), totalDuration(ol)
+    PROPERTIES nameStatus 'Status' = nameStatus(order(ol)), nameCustomer 'Customer' = nameCustomer(order(ol)), quantity(ol), untaxedAmount(ol), totalDuration(ol)
     FILTERS serviceOrder(ol) = o 
 ; 
 
-DESIGN serviceOrder {
+DESIGN Services.order {
     details {
         NEW orderLines FIRST {
             caption = 'Участники';
@@ -42,7 +60,7 @@ DESIGN serviceOrder {
     }
 }
 
-EXTEND FORM serviceOrders 
+EXTEND FORM Services.orders 
     PROPERTIES READONLY countOrderLines(o), nameOrderLines(o)
 ;
 

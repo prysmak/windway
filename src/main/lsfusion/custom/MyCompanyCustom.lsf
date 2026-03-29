@@ -1,14 +1,20 @@
 MODULE MyCompanyCustom;
 
 REQUIRE
+        Eval, ProcessMonitor, Backup, Chat, Documentation,
         IndividualCustom, LegalEntityCustom,
+        SalesOrderStatusCustom,
 //        CRM,
         Lead, LeadLost, LeadPartner, LeadInitial,
         LeadCustomer, LeadCall, LeadEmail, LeadItemCustom,
-        LeadSalesOrder, LeadInvoice, LeadKanbanCustom,
-        LeadReport, LeadMarketing, MarketingInitial, LeadReportMarketing,
+        LeadKanbanCustom,
+        LeadReport, 
+        MarketingInitial, LeadReportMarketing,
+        LeadMarketing,
+        LeadSalesOrder, LeadInvoice, 
         LeadDesignCustom,
         
-        Manufacturing, Project, ItemSalesCustom,
-        ServiceOrder, ServiceWork, SalesOrderService, ServiceWorkLoad, ServiceEquipment
+        ItemSalesCustom, 
+        ServiceOrder, ServiceWork, ServiceOrderStatusCustom, ServiceWorkLoad, ServiceEquipment,
+        SalesOrderService
 ;

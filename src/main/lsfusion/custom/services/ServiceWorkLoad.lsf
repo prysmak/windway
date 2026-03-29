@@ -5,16 +5,16 @@ REQUIRE ServiceWork;
 NAMESPACE Services;
 
 duration 'Duration' (DATE d, Assignee c) =
-    GROUP SUM duration(ServiceWork w) IF startDate(w) = d AND assignee(w) = c;
+    GROUP SUM duration(ServiceWork w) IF startDate(w) = d AND in(w, c);
 
 loadItem = DATA LOCAL Item ();
 nameItemLoad 'Продукт' () = name(loadItem());
 
 workOrder (DATE d, Assignee c, Item i) =
-    GROUP LAST ServiceWork w ORDER w WHERE startDate(w) = d AND assignee(w) = c AND item(serviceOrder(w)) = i;
+    GROUP LAST ServiceWork w ORDER w WHERE startDate(w) = d AND in(w, c) AND item(serviceOrder(w)) = i;
 
 duration 'Duration' (DATE d, Assignee c, Item i) =
-    GROUP SUM duration(ServiceWork w) IF startDate(w) = d AND assignee(w) = c AND item(serviceOrder(w)) = i;
+    GROUP SUM duration(ServiceWork w) IF startDate(w) = d AND in(w, c) AND item(serviceOrder(w)) = i;
 
 durationLoad (DATE d, Assignee c, Item i) =
     HTML(CONCAT '', '<b>' + durationToChar(duration(d, c, i)) + '</b>',
@@ -32,13 +32,13 @@ FORM workOrderDateAssignee 'Активности'
     OBJECTS c = Assignee PANEL
 
     OBJECTS w = ServiceWork
-    PROPERTIES(w) READONLY numberServiceOrder, nameServiceOperation, startTime, duration,  endDate, endTime
+    PROPERTIES(w) READONLY numberServiceOrder, note, nameServiceOperation, startTime, duration,  endDate, endTime, distance
     PROPERTIES(w) NEWSESSION NEW, EDIT, DELETE
     FILTERS startDate(w) = d,
-        assignee(w) = c
+        in(w, c)
 ;
 
-FORM workCenterLoad 'Загруженность персонала'
+FORM assigneeLoad 'Загруженность персонала'
     OBJECTS dates = INTERVAL[DATE] PANEL NULL
     PROPERTIES dates '' = VALUE(dates)
 
@@ -58,14 +58,14 @@ FORM workCenterLoad 'Загруженность персонала'
     }
 
     EVENTS ON INIT {
-        SEEK workCenterLoad.dates = interval(firstDayOfMonth(currentDate()), lastDayOfMonth(currentDate()));
+        SEEK assigneeLoad.dates = interval(firstDayOfMonth(currentDate()), lastDayOfMonth(currentDate()));
     }
 
-    PROPERTIES prevInterval '<' = { SEEK workCenterLoad.dates = prevMonthInterval(dates); },
-        nextInterval '>' = { SEEK workCenterLoad.dates = nextMonthInterval(dates); }
+    PROPERTIES prevInterval '<' = { SEEK assigneeLoad.dates = prevMonthInterval(dates); },
+        nextInterval '>' = { SEEK assigneeLoad.dates = nextMonthInterval(dates); }
 ;
 
-DESIGN workCenterLoad {
+DESIGN assigneeLoad {
     OBJECTS {
         NEW header {
             alignment = STRETCH;
@@ -89,7 +89,6 @@ DESIGN workCenterLoad {
 
 NAVIGATOR {
     dashboards {
-        NEW workCenterLoad;
+        NEW assigneeLoad;
     }
 }
-

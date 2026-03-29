@@ -1,0 +1,9 @@
+MODULE LeadInvoiceCustom;
+
+REQUIRE LeadInvoice;
+
+NAMESPACE CRM;
+
+invoiceType 'Тип заявки' = DATA InvoiceType (LeadType);
+nameInvoiceType 'Тип заявки' (LeadType t) = name(invoiceType(t));
+

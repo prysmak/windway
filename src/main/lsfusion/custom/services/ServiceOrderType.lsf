@@ -4,27 +4,27 @@ REQUIRE ServicesSettings, Location;
 
 NAMESPACE Services;
 
-CLASS ServiceOrderType 'Services order type';
+CLASS OrderType 'Services order type';
 
-name '{Name}' = DATA STRING[50] (ServiceOrderType) NONULL IN id;
+name '{Name}' = DATA STRING[50] (OrderType) NONULL IN id;
 
-id '{ID}'= DATA STRING[20] (ServiceOrderType);
-serviceOrderType = GROUP AGGR ServiceOrderType t BY id(t);
+id '{ID}'= DATA STRING[20] (OrderType);
+serviceOrderType = GROUP AGGR OrderType t BY id(t);
 
-numerator 'Numerator' = DATA Numerator (ServiceOrderType);
-nameNumerator 'Numerator' (ServiceOrderType o) = name(numerator(o));
+numerator 'Numerator' = DATA Numerator (OrderType);
+nameNumerator 'Numerator' (OrderType o) = name(numerator(o));
 
-materialsLocation 'Materials location' = DATA Location (ServiceOrderType);
-nameMaterialsLocation 'Materials location' (ServiceOrderType t) = name(materialsLocation(t));
+materialsLocation 'Materials location' = DATA Location (OrderType);
+nameMaterialsLocation 'Materials location' (OrderType t) = name(materialsLocation(t));
 
-FORM serviceOrderType 'Services order type'
-    OBJECTS o = ServiceOrderType PANEL
+FORM orderType 'Services order type'
+    OBJECTS o = OrderType PANEL
     PROPERTIES(o) name, id, nameNumerator, nameMaterialsLocation
 
-    EDIT ServiceOrderType OBJECT o;
+    EDIT OrderType OBJECT o;
 ;
 
-DESIGN serviceOrderType {
+DESIGN orderType {
     OBJECTS {
         NEW header {
             horizontal = TRUE;
@@ -49,15 +49,15 @@ DESIGN serviceOrderType {
     }
 }
 
-FORM serviceOrderTypes 'Types of production orders'
-    OBJECTS o = ServiceOrderType
+FORM orderTypes 'Types of production orders'
+    OBJECTS o = OrderType
     PROPERTIES(o) READONLY name, id
 
-    LIST ServiceOrderType OBJECT o;
+    LIST OrderType OBJECT o;
 ;
 
 EXTEND FORM options
-    OBJECTS ot = ServiceOrderType
+    OBJECTS ot = OrderType
     PROPERTIES(ot) READONLY name, id
     PROPERTIES(ot) NEWSESSION NEW, EDIT, DELETE
 ;
@@ -68,8 +68,8 @@ DESIGN options {
     }
 }
 
-countServiceOrderTypes 'Number of types' () = GROUP SUM 1 IF r IS ServiceOrderType;
-firstServiceOrderType () = GROUP LAST ServiceOrderType t ORDER DESC t WHERE t IS ServiceOrderType;
+countOrderTypes 'Number of types' () = GROUP SUM 1 IF r IS OrderType;
+firstOrderType () = GROUP LAST OrderType t ORDER DESC t WHERE t IS OrderType;
 
-defaultServiceOrderType () = firstServiceOrderType()
-    IF countServiceOrderTypes() = 1;
+defaultOrderType () = firstOrderType()
+    IF countOrderTypes() = 1;

@@ -5,14 +5,14 @@ REQUIRE SalesOrder, SalesOrderSent;
 NAMESPACE Sales;
 
 EXTEND CLASS OrderStatus {
-    confirmed 'Confirmed'
+    confirmed 'Договор'
 }
-confirmed 'Confirmed' = DATA BOOLEAN (Order);
+confirmed 'Договор' = DATA BOOLEAN (Order);
 
 status(Order o) += WHEN confirmed(o) THEN OrderStatus.confirmed;
 color(OrderStatus o) += WHEN o = OrderStatus.confirmed THEN RGB(150,255,150);
 
-confirm 'Confirm' (Order o){
+confirm 'Договор' (Order o){
     APPLY; 
     IF canceled() THEN RETURN;
 
@@ -40,7 +40,7 @@ DESIGN order {
 
 EXTEND FORM orders    
     EXTEND FILTERGROUP status
-        FILTER 'Confirmed' status(o) = OrderStatus.confirmed    
+        FILTER 'Договор' status(o) = OrderStatus.confirmed    
 ;
 
-@defineSelectionAction(orders, Order, confirm, 'Confirm', statuses);
+@defineSelectionAction(orders, Order, confirm, 'Договор', statuses);

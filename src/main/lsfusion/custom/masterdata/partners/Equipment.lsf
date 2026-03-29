@@ -1,0 +1,30 @@
+MODULE Equipment;
+
+REQUIRE Product;
+
+NAMESPACE MasterData;
+
+isEquip 'Оборудование' = DATA BOOLEAN (Product);
+
+EXTEND FORM item
+    PROPERTIES isEquip(i)
+;
+
+EXTEND FORM items
+    PROPERTIES READONLY isEquip(i)
+;
+
+DESIGN item {
+    column3 {
+        MOVE PROPERTY(isEquip(i));
+    }
+}
+
+CLASS Equipment 'Equipment';
+
+equipment = AGGR Equipment WHERE isEquip(Product product) MATERIALIZED;
+
+name(Equipment e) = name(product(e));
+
+
+

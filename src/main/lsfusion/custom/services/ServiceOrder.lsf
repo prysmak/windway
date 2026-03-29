@@ -6,33 +6,33 @@ ServiceOrderType, ServicesSettings;
 
 NAMESPACE Services;
 
-CLASS ServiceOrder 'Service order';
+CLASS Order 'Service order';
 
-@defineDocStatus(serviceOrder, 'Service order status');
+@defineDocStatus(order, 'Service order status');
 
-type 'Type' = DATA ServiceOrderType (ServiceOrder) NONULL;
-nameType 'Type' (ServiceOrder o) = name(type(o));
+type 'Type' = DATA OrderType (Order) NONULL;
+nameType 'Type' (Order o) = name(type(o)) CHARWIDTH 15;
 
-WHEN LOCAL SET(ServiceOrder o IS ServiceOrder) AND NOT CHANGED(type(o)) DO type(o) <- defaultServiceOrderType();
+WHEN LOCAL SET(Order o IS Order) AND NOT CHANGED(type(o)) DO type(o) <- defaultOrderType();
 
-scheduledDateTime 'Start date' = DATA DATETIME (ServiceOrder) IN id;
-scheduledDateTime(ServiceOrder o) <- currentDateTime() WHEN SET(o IS ServiceOrder);
-@defineDateTimeAggregation(ServiceOrder, scheduled, '(scheduled)');
+scheduledDateTime 'Start date' = DATA DATETIME (Order) IN id;
+scheduledDateTime(Order o) <- currentDateTime() WHEN SET(o IS Order);
+@defineDateTimeAggregation(Order, scheduled, '(scheduled)');
 
-@defineNumberType(ServiceOrder);
+@defineNumberType(Order);
 
-numberDate 'Description' (ServiceOrder o) = number(o) + ' (' + scheduledDateTime(o) + ')' IN id;
+numberDate 'Description' (Order o) = number(o) + ' (' + scheduledDateTime(o) + ')' IN id;
 
-item '{Item}' = DATA Item (ServiceOrder);
-nameItem '{Item}' (ServiceOrder m) = name(item(m));
+item '{Item}' = DATA Item (Order);
+nameItem '{Item}' (Order m) = name(item(m));
 
-uom (ServiceOrder o) = uom(item(o));
-nameUom 'UoM' (ServiceOrder m) = name(uom(m));
+uom (Order o) = uom(item(o));
+nameUom 'UoM' (Order m) = name(uom(m));
 
-responsible = DATA Employee (ServiceOrder);
-nameResponsible 'Responsible' (ServiceOrder o) = MasterData.name(responsible(o));
+responsible = DATA Employee (Order);
+nameResponsible 'Responsible' (Order o) = MasterData.name(responsible(o));
 
-responsible(ServiceOrder o) <- currentUser() IF currentUser() IS Employee WHEN SET(o IS ServiceOrder);
+responsible(Order o) <- currentUser() IF currentUser() IS Employee WHEN SET(o IS Order);
 
 // bom
 //bom 'Bill of Materials' = DATA Bom (ServiceOrder);
@@ -44,27 +44,27 @@ responsible(ServiceOrder o) <- currentUser() IF currentUser() IS Employee WHEN S
 //WHEN LOCAL CHANGED(item(ServiceOrder o)) AND NOT CHANGED(bom(o)) AND defaultBom(item(o)) DO
 //    bom(o) <- defaultBom(item(o));
 
-company = DATA Company (ServiceOrder);
-nameCompany 'Company' (ServiceOrder m) = name(company(m));
-WHEN LOCAL SET(ServiceOrder o IS ServiceOrder) AND NOT CHANGED(company(o)) DO company(o) <- defaultCompany();
+company = DATA Company (Order);
+nameCompany 'Company' (Order m) = name(company(m));
+WHEN LOCAL SET(Order o IS Order) AND NOT CHANGED(company(o)) DO company(o) <- defaultCompany();
 
-materialsLocation 'Materials location' = DATA Location (ServiceOrder);
-nameMaterialsLocation 'Materials location' (ServiceOrder m) = name(materialsLocation(m));
-WHEN LOCAL SETCHANGED(type(ServiceOrder mo)) AND NOT materialsLocation(mo) DO materialsLocation(mo) <- materialsLocation(type(mo));
-CONSTRAINT SETCHANGED(materialsLocation(ServiceOrder o)) AND internalUse(materialsLocation(o)) CHECKED BY materialsLocation[ServiceOrder]
+materialsLocation 'Materials location' = DATA Location (Order);
+nameMaterialsLocation 'Materials location' (Order m) = name(materialsLocation(m));
+WHEN LOCAL SETCHANGED(type(Order mo)) AND NOT materialsLocation(mo) DO materialsLocation(mo) <- materialsLocation(type(mo));
+CONSTRAINT SETCHANGED(materialsLocation(Order o)) AND internalUse(materialsLocation(o)) CHECKED BY materialsLocation[Order]
     MESSAGE 'The selected location is for internal use';
 
 //unbuild 'Unbuild' (ServiceOrder mo)= unbuild(type(mo));
 
-note 'Note' = DATA ISTRING (ServiceOrder) CHARWIDTH 20;
+note 'Note' = DATA ISTRING (Order) CHARWIDTH 20;
 
 // consumed
 CLASS ConsumedLine 'Materials';
 
-serviceOrder = DATA ServiceOrder (ConsumedLine) NONULL DELETE;
+order = DATA Order (ConsumedLine) NONULL DELETE;
 
-countConsumedLine 'Material lines' (ServiceOrder m) = GROUP SUM 1 IF serviceOrder(ConsumedLine l) = m MATERIALIZED;
-index '№' = PARTITION SUM 1 ORDER ConsumedLine l BY serviceOrder(l) IN id MATERIALIZED CHARWIDTH 3;
+countConsumedLine 'Material lines' (Order m) = GROUP SUM 1 IF order(ConsumedLine l) = m MATERIALIZED;
+index '№' = PARTITION SUM 1 ORDER ConsumedLine l BY order(l) IN id MATERIALIZED CHARWIDTH 3;
 
 item '{Item}' = DATA Item (ConsumedLine);
 nameItem '{Item}' (ConsumedLine l) = name(item(l));
@@ -78,7 +78,7 @@ nameUom 'UoM' (ConsumedLine l) = name(uom(l));
 
 toConsume 'To consume' = DATA NUMERIC[16,3] (ConsumedLine);
 
-toConsume 'To consume' (ServiceOrder o) = GROUP SUM toConsume(ConsumedLine l) IF serviceOrder(l) = o AND item(l) = item(o) MATERIALIZED;
+toConsume 'To consume' (Order o) = GROUP SUM toConsume(ConsumedLine l) IF order(l) = o AND item(l) = item(o) MATERIALIZED;
 
 //// finished
 //CLASS FinishedLine 'Finished products';
@@ -112,19 +112,19 @@ toConsume 'To consume' (ServiceOrder o) = GROUP SUM toConsume(ConsumedLine l) IF
 //toProduce '{Manufacture}' (ServiceOrder o) = GROUP SUM toProduce(FinishedLine l) IF serviceOrder(l) = o AND item(l) = item(o) MATERIALIZED;
 
 // line properties
-status (ConsumedLine l) = status(serviceOrder(l));
+status (ConsumedLine l) = status(order(l));
 nameStatus 'Status' (ConsumedLine l) = name(status(l));
 
-nameType 'Type' (ConsumedLine l) = nameType(serviceOrder(l));
-scheduledDateTime 'Start date' (ConsumedLine l) = scheduledDateTime(serviceOrder(l)) IN id;
-scheduledDate 'Start date' (ConsumedLine l) = scheduledDate(serviceOrder(l));
-number 'Number' (ConsumedLine l) = number(serviceOrder(l)) IN id;
+nameType 'Type' (ConsumedLine l) = nameType(order(l));
+scheduledDateTime 'Start date' (ConsumedLine l) = scheduledDateTime(order(l)) IN id;
+scheduledDate 'Start date' (ConsumedLine l) = scheduledDate(order(l));
+number 'Number' (ConsumedLine l) = number(order(l)) IN id;
 
-responsible (ConsumedLine l) = responsible(serviceOrder(l));
+responsible (ConsumedLine l) = responsible(order(l));
 nameResponsible 'Responsible' (ConsumedLine l) = MasterData.name(responsible(l));
 
-FORM serviceOrder 'Мероприятие'
-    OBJECTS o = ServiceOrder PANEL
+FORM order 'Мероприятие'
+    OBJECTS o = Order PANEL
     PROPERTIES(o) READONLYIF readonly(o)
     nameType, scheduledDateTime, number, nameCompany, nameResponsible,
         nameItem, 
@@ -134,18 +134,19 @@ FORM serviceOrder 'Мероприятие'
     OBJECTS c = ConsumedLine
     PROPERTIES(c) READONLYIF readonly(o)
     index READONLY, nameItem, description, nameUom, idBarCodeItem, idItem, toConsume, NEW, DELETE
-    FILTERS serviceOrder(c) = o
+    FILTERS order(c) = o
 
-    EDIT ServiceOrder OBJECT o
+    EDIT Order OBJECT o
 ;
 
-DESIGN serviceOrder {
+DESIGN order {
     caption = badged('Мероприятие', number(o) + '(' + scheduledDateTime(o) + ')');
     OBJECTS {
         NEW header {
             alignment = STRETCH;
             horizontal = TRUE;
             NEW headerLeft {
+                lines = 3;
                 MOVE PROPERTY(nameType(o)) { notNull = TRUE; };
                 MOVE PROPERTY(nameItem(o));
                 MOVE PROPERTY(scheduledDateTime(o));
@@ -153,15 +154,18 @@ DESIGN serviceOrder {
                 MOVE PROPERTY(nameCompany(o));
                 MOVE PROPERTY(nameResponsible(o));
             }
-            NEW headerRight {
-                fill = 1;
-            }
-            NEW relatedDoc {
-                fill = 1;
-                tabbed = TRUE;
-            }
+//            NEW headerRight {
+//                fill = 1;
+//            }
+//            NEW relatedDoc {
+//                fill = 1;
+//                tabbed = TRUE;
+//            }
         }
         MOVE PROPERTY(note(o));
+        NEW works {
+            fill = 1;
+        }
         NEW details {
             fill = 1;
             tabbed = TRUE;
@@ -188,12 +192,12 @@ DESIGN serviceOrder {
 }
 
 //edit (FinishedLine l) + { edit(serviceOrder(l)); }
-edit (ConsumedLine l) + { edit(serviceOrder(l)); }
+edit (ConsumedLine l) + { edit(order(l)); }
 
-@defineDocHistoryHeader(serviceOrder, scheduledDateTime);
-@defineHistoryProperty(serviceOrder, item, 'Item', nameItem);
-@defineHistoryProperty(serviceOrder, company, 'Company', nameCompany);
-@defineHistoryProperty(serviceOrder, responsible, 'Responsible', nameResponsible);
+@defineDocHistoryHeader(order, scheduledDateTime);
+@defineHistoryProperty(order, item, 'Item', nameItem);
+@defineHistoryProperty(order, company, 'Company', nameCompany);
+@defineHistoryProperty(order, responsible, 'Responsible', nameResponsible);
 
 //@defineHistoryProperty(serviceOrder, toManufacture, '{Manufacture}'){
 //    @defineHistoryProperty(serviceOrder, toManufacture, '{Manufacture}', toManufacture){
@@ -210,13 +214,13 @@ edit (ConsumedLine l) + { edit(serviceOrder(l)); }
 //};
 //};
 
-@defineDocHistoryLine(serviceOrder, ConsumedLine, item);
-@defineDocHistoryLineProperty(serviceOrder, ConsumedLine, toConsume, 'To consume', nameItem);
+@defineDocHistoryLine(order, ConsumedLine, item);
+@defineDocHistoryLineProperty(order, ConsumedLine, toConsume, 'To consume', nameItem);
 
-background = ABSTRACT CASE COLOR (ServiceOrder);
+background = ABSTRACT CASE COLOR (Order);
 
-FORM serviceOrders 'Мероприятия'
-    OBJECTS o = ServiceOrder BACKGROUND background(o)
+FORM orders 'Мероприятия'
+    OBJECTS o = Order BACKGROUND background(o)
     PROPERTIES(o) READONLYIF isReadonly()
     number, scheduledDateTime, nameItem, 
     nameType, nameResponsible
@@ -227,33 +231,33 @@ FORM serviceOrders 'Мероприятия'
 //        countFinishedLine READONLY
     PROPERTIES(o) NEWSESSION NEW, EDIT, DELETE DISABLEIF readonly(o)
 
-    LIST ServiceOrder OBJECT o
+    LIST Order OBJECT o
 ;
 
-@extendFormEditable(serviceOrders);
+@extendFormEditable(orders);
 
-@defineDocObjectsForm(serviceOrders, o, 'План мероприятий');
-@defineDocStatusForm(serviceOrder, o);
+@defineDocObjectsForm(orders, o, 'План мероприятий');
+@defineDocStatusForm(order, o);
 
-WHEN LOCAL SET(ServiceOrder o IS ServiceOrder) AND NOT CHANGED(materialsLocation(o)) AND countLocation() = 1 DO
+WHEN LOCAL SET(Order o IS Order) AND NOT CHANGED(materialsLocation(o)) AND countLocation() = 1 DO
     materialsLocation(o) <- firstLocation();
 
-@defineHistoryForm(serviceOrder, serviceOrder, o);
+@defineHistoryForm(order, order, o);
 
-@defineObjectComments(serviceOrder, o, details);
+@defineObjectComments(order, o, details);
 
-@defineObjectFiles(serviceOrder, o, 'Service order file');
+@defineObjectFiles(order, o, 'Service order file');
 
 NAVIGATOR {
     operations {
-        NEW serviceOrders;
+        NEW orders;
     }
 }
 
 // copy
-clone ABSTRACT LIST (ServiceOrder, ServiceOrder);
+clone ABSTRACT LIST (Order, Order);
 
-clone(ServiceOrder to, ServiceOrder from) + {
+clone(Order to, Order from) + {
     type(to) <- type(from);
 
     item(to) <- item(from);
@@ -275,26 +279,26 @@ clone(ServiceOrder to, ServiceOrder from) + {
 //    }
 }
 
-copy 'Copy' (ServiceOrder from) {
+copy 'Copy' (Order from) {
     NEWSESSION {
-        NEW to = ServiceOrder {
+        NEW to = Order {
             clone(to, from);
             APPLY;
-            SHOW serviceOrder OBJECTS o = to DOCKED;
+            SHOW order OBJECTS o = to DOCKED;
         }
     }
 }
 
-EXTEND FORM serviceOrder
+EXTEND FORM order
     PROPERTIES(o) copy
 ;
 
-DESIGN serviceOrder {
+DESIGN order {
     secondaryActions {
         MOVE PROPERTY(copy(o)) { valueClass = 'btn-secondary'; }
     }
 }
 
-EXTEND FORM serviceOrders
+EXTEND FORM orders
     PROPERTIES(o) copy TOOLBAR 
 ;

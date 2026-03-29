@@ -1,0 +1,9 @@
+MODULE ServiceOrderSelection;
+
+REQUIRE ServiceOrder;
+
+NAMESPACE Services;
+
+@defineSelection(Order);
+
+@defineSelectionForm(orders, Order, o);

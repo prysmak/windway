@@ -1,6 +1,6 @@
 MODULE ServiceEquipment;
 
-REQUIRE ServiceOrder, ServiceWork, Item;
+REQUIRE ServiceOrder, ServiceWork;
 
 NAMESPACE Services;
 
@@ -20,37 +20,113 @@ DESIGN item {
     }
 }
 
-dataIn 'вкл' = DATA BOOLEAN (ServiceOrder, Item);
+dataIn 'Меропр' = DATA BOOLEAN (Order, Item);
 
-in 'вкл' = DATA BOOLEAN (ServiceWork, Item);
+in 'Активн' = DATA BOOLEAN (ServiceWork, Item);
 
-in (ServiceOrder o, Item i) = OVERRIDE dataIn(o, i), TRUE IF [GROUP SUM 1 IF in(ServiceWork sw, Item ii) BY serviceOrder(sw), ii](o, i);
+in (Order o, Item i) = OVERRIDE dataIn(o, i), TRUE IF [GROUP SUM 1 IF in(ServiceWork sw, Item ii) BY serviceOrder(sw), ii](o, i);
 
-nameEquipments 'Оборудование' (ServiceOrder so) = GROUP CONCAT name(Item i) IF in(so, i), ', ' ORDER i;
+//WHEN LOCAL CHANGED(dataIn(Order o, Item i)) DO in(ServiceWork sw, i) <- dataIn(o, i) WHERE serviceOrder(sw) = o;
 
-nameEquipments 'Оборудование' (ServiceWork sw) = GROUP CONCAT name(Item i) IF in(sw, i), ', ' ORDER i;
+nameEquipments 'Оборудование' (ServiceWork sw) = GROUP CONCAT name(Item e) IF in(sw, e), ', ' ORDER e;
 
-EXTEND FORM serviceOrder
-    OBJECTS eq = Item
-    PROPERTIES in(o, eq), name(eq), in(sw, eq)
-    FILTERS isEquipment(eq)
-    FILTERGROUP include
-        FILTER 'вкл' in(o, eq) DEFAULT
+nameEquipments 'Оборудование' (Order o) = GROUP CONCAT name(Item e) IF in(o, e), ', ' ORDER e;
+
+inSelect = DATA LOCAL BOOLEAN (Product);
+
+FORM listEquipments 'Выбор оборудования'
+    OBJECTS sw = ServiceWork
+    OBJECTS i = Item
+    PROPERTIES name(i) BACKGROUND (RGB(0,255,255) IF in(sw, i)) ON CHANGE { 
+        in(sw, i) <- NOT in(sw, i); 
+    }
+    FILTERS isEquipment(i)
 ;
 
-DESIGN serviceOrder {
-    details {
-        NEW equipment {
-            caption = 'Оборудование';
-            MOVE BOX(eq) { caption = ''; }
-        }
-    }
+DESIGN listEquipments {
+    BOX(i) { caption = '';}
+    PROPERTY(name(i)) { caption = 'Наименование'; }
+    REMOVE TOOLBARBOX(i);
 }
+
+EXTEND FORM order
+    PROPERTIES nameEquipments(sw) BEFORE note(sw) ON CHANGE { SHOW listEquipments OBJECTS sw = sw; }
+;
+
+EXTEND FORM orders
+    PROPERTIES READONLY nameEquipments(o)
+;
+
+EXTEND FORM serviceWork
+    PROPERTIES nameEquipments(o) BEFORE note(o) ON CHANGE { SHOW listEquipments OBJECTS sw = o; }
+;
 
 EXTEND FORM serviceWorks
     PROPERTIES READONLY nameEquipments(o)
 ;
 
-EXTEND FORM serviceOrders
-    PROPERTIES READONLY nameEquipments(o)
+loadEquipment 'Duration' (DATE d, Product i) =
+    GROUP SUM duration(ServiceWork w) IF startDate(w) = d AND in(w, i);
+
+FORM equipmentLoadDate 'Активности'
+    OBJECTS d = DATE PANEL
+    OBJECTS i = Product PANEL
+
+    OBJECTS w = ServiceWork
+    PROPERTIES(w) READONLY numberServiceOrder, note, nameServiceOperation, startTime, duration,  endDate, endTime, distance
+    PROPERTIES(w) NEWSESSION NEW, EDIT, DELETE
+    FILTERS startDate(w) = d,
+        in(w, i)
 ;
+
+FORM equipmentLoad 'Загруженность оборудования'
+    OBJECTS dates = INTERVAL[DATE] PANEL NULL
+    PROPERTIES dates '' = VALUE(dates)
+
+    OBJECTS d = DATE
+    FILTERS iterate(d, from(dates), to(dates))
+
+    OBJECTS i = Product
+    PROPERTIES(i) READONLY name
+    PROPERTIES duration 'Duration' = HTML(durationToChar(loadEquipment(d, i)))
+    COLUMNS (d) HEADER extractDay(d) //BACKGROUND backgroundDurationLoad(d, c, loadItem())
+    ON CHANGE {
+        SHOW equipmentLoadDate OBJECTS d = d, i = i FLOAT;
+    }
+    
+    FILTERS isEquipment(i)
+    
+    EVENTS ON INIT {
+        SEEK equipmentLoad.dates = interval(firstDayOfMonth(currentDate()), lastDayOfMonth(currentDate()));
+    }
+
+    PROPERTIES prevInterval '<' = { SEEK equipmentLoad.dates = prevMonthInterval(dates); },
+        nextInterval '>' = { SEEK equipmentLoad.dates = nextMonthInterval(dates); }
+;
+
+DESIGN equipmentLoad {
+    OBJECTS {
+        NEW header {
+            alignment = STRETCH;
+            horizontal = TRUE;
+            NEW interval {
+                horizontal = TRUE;
+                MOVE PROPERTY(prevInterval);
+                MOVE PROPERTY(dates);
+                MOVE PROPERTY(nextInterval);
+            }
+        }
+        MOVE BOX(i) {
+            caption = '';
+            PROPERTY(duration) {
+                charWidth = 4;
+            }
+        }
+    }
+}
+
+NAVIGATOR {
+    dashboards {
+        NEW equipmentLoad;
+    }
+}

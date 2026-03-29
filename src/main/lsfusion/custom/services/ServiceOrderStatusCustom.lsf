@@ -1,0 +1,88 @@
+MODULE ServiceOrderStatusCustom;
+
+REQUIRE ServiceOrder, ServiceOrderSelection;
+
+NAMESPACE Services;
+
+EXTEND CLASS OrderStatus {
+    inProgress 'Запланировано'
+}
+inProgress 'Запланировано' = DATA BOOLEAN (Order);
+
+status(Order o) += WHEN inProgress(o) THEN OrderStatus.inProgress;
+color(OrderStatus o) += WHEN o = OrderStatus.inProgress THEN RGB(150,255,150);
+
+toProgress 'Запланировать' (Order o){
+    APPLY;
+    IF canceled() THEN RETURN;
+
+    NEWSESSION {
+        inProgress(o) <- TRUE;
+        APPLY;
+    }
+}
+
+EXTEND FORM order
+    PROPERTIES(o) toProgress SHOWIF (status(o) = OrderStatus.draft), inProgress
+;
+
+DESIGN order {
+    primaryActions {
+        MOVE PROPERTY(toProgress(o)) { valueClass = 'btn-primary'; }
+    }
+    statusGroup {
+        MOVE PROPERTY(inProgress(o)) {
+            valueClass = 'btn-check';
+            captionClass = 'btn btn-outline-primary btn-arrow-right';
+        }
+    }
+}
+
+EXTEND FORM orders
+    EXTEND FILTERGROUP status
+        FILTER 'Запланировано' status(o) = OrderStatus.inProgress
+;
+
+@defineSelectionAction(orders, Order, toProgress, 'Запланировано', statuses);
+
+
+EXTEND CLASS OrderStatus {
+    completed 'Завершено'
+}
+completed 'Завершено' = DATA BOOLEAN (Order);
+
+status(Order o) += WHEN completed(o) THEN OrderStatus.completed;
+color(OrderStatus o) += WHEN o = OrderStatus.completed THEN RGB(150,255,150);
+
+toCompleted 'Завершено' (Order o){
+    APPLY;
+    IF canceled() THEN RETURN;
+
+    NEWSESSION {
+        completed(o) <- TRUE;
+        APPLY;
+    }
+}
+
+EXTEND FORM order
+    PROPERTIES(o) toCompleted SHOWIF (status(o) = OrderStatus.draft), completed
+;
+
+DESIGN order {
+    primaryActions {
+        MOVE PROPERTY(toCompleted(o)) { valueClass = 'btn-primary'; }
+    }
+    statusGroup {
+        MOVE PROPERTY(completed(o)) {
+            valueClass = 'btn-check';
+            captionClass = 'btn btn-outline-primary btn-arrow-right';
+        }
+    }
+}
+
+EXTEND FORM orders
+    EXTEND FILTERGROUP status
+        FILTER 'Завершено' status(o) = OrderStatus.completed
+;
+
+@defineSelectionAction(orders, Order, toCompleted, 'Завершено', statuses);

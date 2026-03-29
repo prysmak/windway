@@ -1,8 +1,7 @@
 MODULE LeadKanbanCustom;
 
 REQUIRE LeadCustom, LeadMarketing, LeadItem, LeadLost, LeadPartner,
-        LeadCustomer, LeadCall, LeadEmail, LeadItemCustom,
-        LeadSalesOrder;
+        LeadCustomer, LeadCall, LeadEmail, LeadItemCustom;
 
 PRIORITY MasterData;
 
@@ -22,6 +21,10 @@ htmlItems (Lead l) = HTMLTEXT(OVERRIDE nameItem(l), GROUP CONCAT ('<div>' + name
 
 order = DATA LONG (CustomUser, Lead);
 currentOrder (Lead l) =  order(currentUser(), l);
+
+htmlNameType 'Type' (Lead t) = HTMLTEXT(name(type(t)));
+
+htmlNameSalesPerson 'Sale person' (Lead t) = HTMLTEXT(nameSalesPerson(t));
 
 activities (Lead l) = 
     '<table>' + 
@@ -65,7 +68,7 @@ EXTEND FORM leads
     HEADER JSON FROM employees = leadEmployees(), statuses = leadStatuses()
     PROPERTIES(ll) name = idName,
         tags = jsonTags,
-        nameType,
+        nameType = htmlNameType,
         nameClient,                       
         expectedRevenue,
         namePriority,

@@ -33,14 +33,14 @@ DESIGN orderType {
 
 // order
 EXTEND CLASS OrderStatus {
-    sent 'Sent'
+    sent 'Бронь'
 }
-sent 'Sent'  = DATA BOOLEAN (Order);
+sent 'Бронь'  = DATA BOOLEAN (Order);
 
 status(Order o) += WHEN sent(o) THEN OrderStatus.sent;
 color(OrderStatus i) += WHEN i = OrderStatus.sent THEN RGB(252,247,149);
 
-send 'Send' (Order o) {
+send 'Бронь' (Order o) {
     APPLY;
     IF canceled() THEN RETURN;
     
@@ -93,7 +93,7 @@ DESIGN order {
 
 EXTEND FORM orders    
     EXTEND FILTERGROUP status
-        FILTER 'Sent' status(o) = OrderStatus.sent    
+        FILTER 'Бронь' status(o) = OrderStatus.sent    
 ;
 
-@defineSelectionAction(orders, Order, send, 'Send', statuses);
+@defineSelectionAction(orders, Order, send, 'Бронь', statuses);

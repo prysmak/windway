@@ -10,8 +10,8 @@ CLASS ServiceWork 'Work order';
 
 name '{Name}' = DATA ISTRING[100] (ServiceWork) CHARWIDTH 20;
 
-serviceOrder 'Service order' = DATA ServiceOrder (ServiceWork) NONULL DELETE;
-countServiceWork (ServiceOrder o) = GROUP SUM 1 IF serviceOrder(ServiceWork wo) = o;
+serviceOrder 'Service order' = DATA Order (ServiceWork) NONULL DELETE;
+countServiceWork (Order o) = GROUP SUM 1 IF serviceOrder(ServiceWork wo) = o;
 
 numberServiceOrder 'Service order' (ServiceWork w) = number(serviceOrder(w));
 itemServiceOrder '{Item}' (ServiceWork w) = item(serviceOrder(w));
@@ -24,54 +24,72 @@ nameAssignee 'Assignee' (ServiceWork w) = name(assignee(w));
 
 assignee(ServiceWork w) <- responsible(serviceOrder(w)) WHEN SET(serviceOrder(w));
 
-WHEN LOCAL FORMS serviceOrder SETCHANGED(responsible(ServiceOrder o)) AND countServiceWork(o) DO {
+//WHEN LOCAL FORMS order SETCHANGED(responsible(Order o)) AND countServiceWork(o) DO {
+//    ASK 'Изменить исполнителя в расписании' DO {
+//        assignee(ServiceWork sw) <- responsible(o) WHERE serviceOrder(sw) = o;
+//    }
+//}
+
+in = DATA BOOLEAN (ServiceWork, Assignee);
+nameAssignees 'Исполнители' (ServiceWork w) = GROUP CONCAT name(Assignee a) IF in(w, a), ', ' ORDER a;
+
+WHEN LOCAL FORMS order SETCHANGED(responsible(Order o)) AND countServiceWork(o) DO {
     ASK 'Изменить исполнителя в расписании' DO {
-        assignee(ServiceWork sw) <- responsible(o) WHERE serviceOrder(sw) = o;
+        in(ServiceWork sw, Assignee a) <- NULL WHERE serviceOrder(sw) = o;
+        in(ServiceWork sw, responsible(o)) <- TRUE WHERE serviceOrder(sw) = o;
     }
 }
 
-lastServiceOperation = DATA LOCAL ServiceOperation (ServiceOrder);
+FORM serviceWorkAssignees 'Выбор исполнителя'
+    OBJECTS sw = ServiceWork
 
-serviceOperation 'Operation' = DATA ServiceOperation (ServiceWork) NONULL;
+    OBJECTS l = Assignee
+    PROPERTIES name(l) BACKGROUND (RGB(0,255,255) IF in(sw, l)) ON CHANGE {
+        in(sw, l) <- NOT in(sw, l);
+    }
+//    FILTERS serviceOrder(l) = serviceOrder(sw)
+;
+
+DESIGN serviceWorkAssignees {
+    BOX(l) { caption = '';}
+    PROPERTY(name(l)) { caption = 'Имя';}
+    REMOVE TOOLBARBOX(l);
+}
+
+lastServiceOperation = DATA LOCAL Operation (Order);
+
+serviceOperation 'Operation' = DATA Operation (ServiceWork) NONULL;
 nameServiceOperation 'Operation' (ServiceWork w) = name(serviceOperation(w));
 
 serviceOperation(ServiceWork w) <- lastServiceOperation(serviceOrder(w)) WHEN SET(serviceOrder(w));
 
-WHEN LOCAL SETCHANGED(serviceOperation(ServiceWork ws)) DO lastServiceOperation(ServiceOrder o) <- serviceOperation(ws) IF o = serviceOrder(ws);
+//WHEN LOCAL SETCHANGED(serviceOperation(ServiceWork ws)) DO lastServiceOperation(Order o) <- serviceOperation(ws) IF o = serviceOrder(ws);
 
 startDate 'Start date' = DATA DATE (ServiceWork);
 startDate(ServiceWork w) <- scheduledDate(serviceOrder(w)) WHEN SET(serviceOrder(w));
 
-lastStartTimeWork = DATA LOCAL TIME(ServiceOrder);
+lastStartTimeWork = DATA LOCAL TIME(Order);
 
 startTime 'Start time' = DATA TIME (ServiceWork);
-startTime(ServiceWork w) <- OVERRIDE lastStartTimeWork(serviceOrder(w)), TIME(scheduledDateTime(serviceOrder(w))) WHEN SET(serviceOrder(w));
+startTime(ServiceWork w) <- TIME(scheduledDateTime(serviceOrder(w))) WHEN SET(serviceOrder(w));
 
-WHEN LOCAL SETCHANGED(startTime(ServiceWork ws)) DO lastStartTimeWork(ServiceOrder o) <- startTime(ws) IF o = serviceOrder(ws);
+//WHEN LOCAL SETCHANGED(startTime(ServiceWork ws)) DO lastStartTimeWork(Order o) <- startTime(ws) IF o = serviceOrder(ws);
 
 endDate 'End date' = DATA DATE (ServiceWork);
 
 endTime 'End time' = DATA TIME (ServiceWork);
 
-lastDurationWork = DATA LOCAL NUMERIC[8,2] (ServiceOrder);
+lastDurationWork = DATA LOCAL NUMERIC[8,2] (Order);
 
 duration 'Duration' = DATA NUMERIC[8,2] (ServiceWork) CHARWIDTH 5;
 durationToChar (NUMERIC[8,2] h) = STRING(rtrim(toChar(h, 'FM99999.99'),'.'));
-duration(ServiceWork w) <- OVERRIDE lastDurationWork(serviceOrder(w)), 1.0 WHEN SET(serviceOrder(w));;
+//duration(ServiceWork w) <- OVERRIDE lastDurationWork(serviceOrder(w)), 1.0 WHEN SET(serviceOrder(w));;
 
-WHEN LOCAL SETCHANGED(duration(ServiceWork ws)) DO lastDurationWork(ServiceOrder o) <- duration(ws) IF o = serviceOrder(ws);
-
-WHEN LOCAL (SETCHANGED(duration(ServiceWork sw)) OR SETCHANGED(startDate(sw)) OR SETCHANGED(startTime(sw))) 
-        AND NOT CHANGED(endTime(sw)) AND startDate(sw) AND startTime(sw) DO {
-    LOCAL endDateTime = DATETIME (ServiceWork);
-    endDateTime(sw) <- sumMinutes(dateTimeToDateTime(startDate(sw), startTime(sw)), duration(sw) * 60);
-    endDate(sw) <- DATE(endDateTime(sw));
-    endTime(sw) <- TIME(endDateTime(sw));
-}
+//WHEN LOCAL SETCHANGED(duration(ServiceWork ws)) DO lastDurationWork(Order o) <- duration(ws) IF o = serviceOrder(ws);
 
 prevStartDateTime (ServiceWork sw) = dateTimeToDateTime(PREV(startDate(sw)), PREV(startTime(sw)));
 
-WHEN LOCAL FORMS serviceOrder SETCHANGED(scheduledDateTime(ServiceOrder o)) AND countServiceWork(o) DO {
+WHEN LOCAL FORMS order SETCHANGED(scheduledDateTime(Order o)) AND countServiceWork(o) DO {
     ASK 'Изменить раcписание' DO {
         LOCAL seconds = INTEGER ();
         seconds() <- subtractSeconds(PREV(scheduledDateTime(o)), scheduledDateTime(o));
@@ -80,13 +98,23 @@ WHEN LOCAL FORMS serviceOrder SETCHANGED(scheduledDateTime(ServiceOrder o)) AND 
     }
 }
 
+WHEN LOCAL FORMS order (SETCHANGED(duration(ServiceWork sw)) OR SETCHANGED(startDate(sw)) OR SETCHANGED(startTime(sw)))
+    AND NOT CHANGED(endTime(sw)) AND startDate(sw) AND startTime(sw) DO {
+    LOCAL endDateTime = DATETIME (ServiceWork);
+    endDateTime(sw) <- sumMinutes(dateTimeToDateTime(startDate(sw), startTime(sw)), duration(sw) * 60);
+    endDate(sw) <- DATE(endDateTime(sw));
+    endTime(sw) <- TIME(endDateTime(sw));
+}
 
 note 'Note' = DATA ISTRING (ServiceWork) CHARWIDTH 20;
 
-FORM serviceWork 'Активности'
+distance 'Расстояние' = DATA NUMERIC[5,1] (ServiceWork);
+
+FORM serviceWork 'Активность'
     OBJECTS o = ServiceWork PANEL
-    PROPERTIES(o) numberServiceOrder, nameItemServiceOrder READONLY, nameAssignee, nameServiceOperation,
-        startDate, startTime, duration, endDate, endTime, 
+    PROPERTIES(o) numberServiceOrder, nameItemServiceOrder READONLY, nameAssignee, 
+        nameAssignees  ON CHANGE {SHOW serviceWorkAssignees OBJECTS sw = o;}, nameServiceOperation,
+        startDate, startTime, duration, endDate, endTime, distance,
         note
 
     EDIT ServiceWork OBJECT o
@@ -102,6 +130,7 @@ DESIGN serviceWork {
                 MOVE PROPERTY(numberServiceOrder(o));
                 MOVE PROPERTY(nameServiceOperation(o));
                 MOVE PROPERTY(nameAssignee(o)) { notNull = TRUE; }
+                MOVE PROPERTY(nameAssignees(o));
             }
             NEW headerRight {
                 MOVE PROPERTY(nameItemServiceOrder(o));
@@ -110,6 +139,7 @@ DESIGN serviceWork {
                 MOVE PROPERTY(duration(o)) { caption = 'Длительность, часов'; };
                 MOVE PROPERTY(endDate(o));
                 MOVE PROPERTY(endTime(o));
+                MOVE PROPERTY(distance(o));
             }
         }
         MOVE PROPERTY(note(o));
@@ -131,9 +161,9 @@ background = ABSTRACT CASE COLOR (ServiceWork);
 FORM serviceWorks 'Активности'
     OBJECTS o = ServiceWork BACKGROUND background(o)
     PROPERTIES(o) READONLYIF isReadonly()
-    name, numberServiceOrder, nameItemServiceOrder, nameAssignee, nameServiceOperation,
-        startDate, startTime, duration, endDate, endTime 
-    PROPERTIES(o) NEWSESSION NEW, EDIT, DELETE
+    name, numberServiceOrder, nameItemServiceOrder, nameAssignee, nameAssignees, nameServiceOperation,
+        startDate, startTime, duration, endDate, endTime, distance
+    //PROPERTIES(o) NEWSESSION NEW, EDIT, DELETE
 
     FILTERGROUP active
         FILTER 'Opened' opened(o) DEFAULT
@@ -157,15 +187,17 @@ NAVIGATOR {
     }
 }
 
-EXTEND FORM serviceOrder
+EXTEND FORM order
     OBJECTS sw = ServiceWork
-    PROPERTIES(sw) imagedNameStatus BACKGROUND colorStatus(sw), nameServiceOperation, nameAssignee, startDate, startTime, duration, endDate, endTime
+    PROPERTIES(sw) imagedNameStatus BACKGROUND colorStatus(sw), nameServiceOperation, nameAssignees ON CHANGE {SHOW serviceWorkAssignees OBJECTS sw = sw;}
+    , note, 
+            startDate, startTime, duration, endDate, endTime, distance
     PROPERTIES(sw) NEW, DELETE
     FILTERS serviceOrder(sw) = o
 ;
 
-DESIGN serviceOrder {
-    headerRight {
+DESIGN order {
+    works {
         MOVE BOX(sw) {
             fill = 1;
             caption = badged('Активности', countServiceWork(o));
@@ -174,7 +206,7 @@ DESIGN serviceOrder {
     }
 }
 
-clone (ServiceOrder to, ServiceOrder from) + {
+clone (Order to, Order from) + {
     responsible(to) <- responsible(from);
     scheduledDateTime(to) <- scheduledDateTime(from);
     FOR serviceOrder(ServiceWork sw) = from NEW ol = ServiceWork DO {
@@ -184,6 +216,10 @@ clone (ServiceOrder to, ServiceOrder from) + {
         startDate(ol) <- startDate(sw);
         startTime(ol) <- startTime(sw);
         duration(ol) <- duration(sw);
+        endDate(ol) <- endDate(sw);
+        endTime(ol) <- endTime(sw);
+        distance(ol) <- distance(sw);
+        note(ol) <- note(sw);
     }
 }
 
@@ -205,13 +241,14 @@ FORM workOrderDateItem 'Активности'
     OBJECTS i = Item PANEL
 
     OBJECTS w = ServiceWork
-    PROPERTIES(w) READONLY numberServiceOrder, nameServiceOperation, startTime, duration,  endDate, endTime
+    PROPERTIES(w) READONLY numberServiceOrder, nameAssignees, note, nameServiceOperation, 
+            startTime, duration,  endDate, endTime, distance
     PROPERTIES(w) NEWSESSION NEW, EDIT, DELETE
     FILTERS startDate(w) = d,
         item(serviceOrder(w)) = i
 ;
 
-EXTEND FORM serviceOrders
+EXTEND FORM orders
     OBJECTS dates = INTERVAL[DATE] PANEL NULL
     PROPERTIES dates '' = VALUE(dates)
 
@@ -230,14 +267,14 @@ EXTEND FORM serviceOrders
     FILTERS GROUP SUM duration(ServiceWork w) IF item(serviceOrder(w)) = i
 
     EVENTS ON INIT {
-        SEEK serviceOrders.dates = interval(firstDayOfMonth(currentDate()), lastDayOfMonth(currentDate()));
+        SEEK orders.dates = interval(firstDayOfMonth(currentDate()), lastDayOfMonth(currentDate()));
     }
 
-    PROPERTIES prevInterval '<' = { SEEK serviceOrders.dates = prevMonthInterval(dates); },
-        nextInterval '>' = { SEEK serviceOrders.dates = nextMonthInterval(dates); }
+    PROPERTIES prevInterval '<' = { SEEK orders.dates = prevMonthInterval(dates); },
+        nextInterval '>' = { SEEK orders.dates = nextMonthInterval(dates); }
 ;
 
-DESIGN serviceOrders {
+DESIGN orders {
     tabbedPane {
         NEW schedule {
             caption = 'График';

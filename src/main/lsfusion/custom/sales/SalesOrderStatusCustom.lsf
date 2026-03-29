@@ -1,0 +1,5 @@
+MODULE SalesOrderStatusCustom;
+
+REQUIRE SalesOrder, SalesOrderSent, SalesOrderConfirmed, SalesOrderCanceled, SalesOrderLocked;
+
+NAMESPACE Sales;

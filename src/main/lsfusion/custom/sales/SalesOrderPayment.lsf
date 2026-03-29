@@ -1,0 +1,13 @@
+MODULE SalesOrderPayment;
+
+REQUIRE SalesOrder, SalesOrderConfirmed;
+
+NAMESPACE Sales;
+
+CLASS OrderPaymentStatus {
+    notPaid 'не оплачен',
+    prePayd 'частично оплачен',
+    payd 'оплачен полностью'
+}
+
+paymentStatus '' = DATA OrderPaymentStatus (Sales.Order);

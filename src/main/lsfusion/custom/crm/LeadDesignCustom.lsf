@@ -2,8 +2,9 @@ MODULE LeadDesignCustom;
 
 REQUIRE LeadCustom, LeadLost, LeadPartner, 
         LeadCustomer, LeadCall, LeadEmail, LeadItemCustom,
-        LeadSalesOrderCustom, LeadKanbanCustom, 
-        LeadMarketing, Sales, LeadItemCustom, SalesOrderService;
+        LeadSalesOrderCustom, 
+        LeadKanbanCustom, 
+        LeadMarketing, LeadItemCustom, SalesOrderService;
 
 FORM client 
     OBJECTS l = Lead PANEL 
@@ -52,8 +53,8 @@ FORM client
 
     OBJECTS ol = Sales.OrderLine
     PROPERTIES(ol) SHOWIF countOrders(l) nameItem, numberServiceOrder, quantity, price, untaxedAmount, discount, discountPrice
-    PROPERTIES(ol) SHOWIF countOrders(l) NEW, DELETE GRID 
-    FILTERS order(ol) = o
+    //PROPERTIES(ol) NEW, DELETE GRID 
+    FILTERS lead(ol) = l
 
     //    OBJECTS cmt = LeadComment CUSTOM 'comments'
 //    PROPERTIES id = VALUE(cmt)
@@ -114,7 +115,7 @@ DESIGN client {
           //  fill = 1;
             NEW leadPane {
               //  fill = 2;
-                width = 800;
+  //              width = 600;
                 NEW header {
                     alignment = STRETCH;
                     NEW main {
@@ -132,12 +133,14 @@ DESIGN client {
                         fill = 1;
                         //lines = 3;
                         NEW items {
+    //                        width = 200;
                             fill = 1;
                             caption = 'Продукт';
                             MOVE PROPERTY(nameItem(l)) { caption = ''; };
                         }
                         NEW client {
                             fill = 1;
+      //                      width = 250;
                             caption = 'Клиент';
                             MOVE PROPERTY(nameCustomer(l)) { caption = 'Поиск в базе'; };
                             MOVE PROPERTY(nameClient(l));
@@ -147,6 +150,7 @@ DESIGN client {
                             MOVE PROPERTY(telegram(l));
                         }
                         NEW marketing {
+        //                    width = 150;
                             fill = 1;
                             caption = 'Маркетинг';
                             MOVE PROPERTY(nameCampaign(l));
@@ -177,7 +181,7 @@ DESIGN client {
                         alignment = STRETCH;
                         caption = badged('Activities', countOpenedActivity(l));
                         MOVE GRID(act) {
-                            width = 800;
+          //                  width = 600;
                             flex = 0;
                         }
                         REMOVE BOX(act);
@@ -199,6 +203,7 @@ DESIGN client {
                         horizontal = TRUE;
                         MOVE BOX(leadl) {
                             fill = 2;
+                            collapsed = TRUE;
                             caption = '';
                             PROPERTY(description(leadl)) { valueHeight = 18; }
                         }
@@ -210,8 +215,9 @@ DESIGN client {
                 }
             }
             NEW orderPane {
-                width = 800;
+          //      width = 700;
                 fill = 1;
+//                showIf = countOrders(l);
                 NEW orderHeader {
                     MOVE PROPERTY(nameType(o));
                     MOVE PROPERTY(date(o));

@@ -38,11 +38,11 @@ DESIGN integrationData {
                 horizontal = TRUE;
                 alignment = STRETCH;
                 MOVE PROPERTY(tokenEncryptionCertificate()) {
-                    panelCaptionVertical = TRUE;
+                    captionVertical = TRUE;
                     fill = 1;
                 }
                 MOVE PROPERTY(symmetricKeyEncryptionCertificate()) {
-                    panelCaptionVertical = TRUE;
+                    captionVertical = TRUE;
                     fill = 1;
                 }
             }
@@ -57,7 +57,7 @@ CLASS CertificateType 'KSeF certificate type' {
 }
 TABLE certificateType (CertificateType);
 
-name '{master.data.name}' (CertificateType o) = staticCaption(o) IF o IS CertificateType CHARWIDTH 15 MATERIALIZED;
+name '{master.data.name}' (CertificateType o) = caption(o) IF o IS CertificateType CHARWIDTH 15 MATERIALIZED;
 certificate (STRING s) = GROUP MAX CertificateType t BY name(t);
 
 FORM dialogCertificateTypes 'KSeF certificate type'

@@ -18,6 +18,7 @@ GROUP DaneFaKorygowanej EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:DaneFaK
 GROUP Platnosc EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:Platnosc' : Fa;
 GROUP TerminPlatnosci EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:TerminPlatnosci' : Platnosc;
 GROUP DodatkowyOpis EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:DodatkowyOpis' : Fa;
+GROUP Stopka EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:Stopka';
 
 // Nested groups
 GROUP P1DaneId EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:DaneIdentyfikacyjne' : Podmiot1;
@@ -78,14 +79,18 @@ FORM FA3XmlExport
 
     // zaliczka
     OBJECTS z = FakturaZaliczkowa EXTID 'FakturaZaliczkowa' IN Fa
-    PROPERTIES(z) number EXTID 'NrKSeFFaZaliczkowej'
+    PROPERTIES NrKSeFZN = 1 IF NOT number(z),
+               NrFaZaliczkowej = invoiceNumber(z) IF NOT number(z),
+               number(z) EXTID 'NrKSeFFaZaliczkowej'
     FILTERS faktura(z) = f
 
     // FaWiersz
     OBJECTS w = FaWiersz EXTID 'FaWiersz' IN Fa
-    PROPERTIES(w) NrWierszaFa, description EXTID 'P_7', GTIN, nameUom EXTID 'P_8A', quantity EXTID 'P_8B', price EXTID 'P_9A', untaxedAmount EXTID 'P_11', taxes EXTID 'P_12', correction EXTID 'StanPrzed'
+    PROPERTIES(w) NrWierszaFa, description EXTID 'P_7', GTIN, nameUom EXTID 'P_8A', quantity EXTID 'P_8B', price EXTID 'P_9A', untaxedAmount EXTID 'P_11', amount EXTID 'P_11A', taxes EXTID 'P_12', correction EXTID 'StanPrzed'
     FILTERS faktura(w) = f
 
+    PROPERTIES(f) IN Platnosc Zaplacono EXTID 'Zaplacono', DataZaplaty EXTID 'DataZaplaty'
+    
     // TerminPlatnosci
     OBJECTS tp = TerminPlatnosci EXTID 'TerminPlatnosci' IN Platnosc
     PROPERTIES(tp) date EXTID 'Termin'
@@ -100,6 +105,10 @@ FORM FA3XmlExport
     OBJECTS dof = DodatkowyOpis EXTID 'DodatkowyOpis' IN Fa
     PROPERTIES(dof) Klucz EXTID 'Klucz', Wartosc EXTID 'Wartosc'
     FILTERS faktura(dof) = f
+
+    OBJECTS si = StopkaInformacja EXTID 'Informacje' IN Stopka
+    PROPERTIES(si) value EXTID 'StopkaFaktury'
+    FILTERS faktura(si) = f
 ;
 
 // import
@@ -152,6 +161,8 @@ DataWystFaKorygowanej = DATA STRING ();
 NrFaKorygowanej = DATA STRING[50] ();
 NrKSeFFaKorygowanej = DATA STRING[36] ();
 
+NrKSeFZN = DATA LOCAL INTEGER(INTEGER);
+NrFaZaliczkowej = DATA LOCAL STRING[50](INTEGER);
 NrKSeFFaZaliczkowej = DATA LOCAL STRING[36](INTEGER);
 
 NrWierszaFa = DATA LOCAL STRING(INTEGER);
@@ -160,7 +171,9 @@ GTIN = DATA LOCAL STRING(INTEGER);
 P_8A = DATA LOCAL STRING(INTEGER);
 P_8B = DATA LOCAL NUMERIC[16,3](INTEGER);
 P_9A = DATA LOCAL NUMERIC[10,2](INTEGER);
+P_9B = DATA LOCAL NUMERIC[10,2](INTEGER);
 P_11 = DATA LOCAL NUMERIC[14,2](INTEGER);
+P_11A = DATA LOCAL NUMERIC[14,2](INTEGER);
 P_12 = DATA LOCAL STRING(INTEGER);
 StanPrzed = DATA LOCAL INTEGER(INTEGER);
 
@@ -171,10 +184,13 @@ CN = DATA LOCAL STRING (INTEGER);
 PKOB = DATA LOCAL STRING (INTEGER);
 
 Termin = DATA LOCAL DATE (INTEGER);
+Zaplacono = DATA LOCAL INTEGER();
+DataZaplaty = DATA LOCAL DATE();
 FormaPlatnosci = DATA LOCAL INTEGER();
 RachunekBankowyNumber = DATA LOCAL STRING (INTEGER);
 DodatkowyOpisKlucz = DATA LOCAL STRING (INTEGER);
 DodatkowyOpisWartosc = DATA LOCAL STRING (INTEGER);
+StopkaFaktury = DATA LOCAL ISTRING[3500] (INTEGER);
 
 FORM FA3XmlImport FORMEXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:Faktura'
     PROPERTIES ATTR ='http://crd.gov.pl/xml/schematy/dziedzinowe/mf/2022/01/05/eD/DefinicjeTypy/' EXTID 'xmlns:etd', ='http://www.w3.org/2001/XMLSchema' EXTID 'xmlns:xsd', ='http://www.w3.org/2001/XMLSchema-instance' EXTID 'xmlns:xsi'
@@ -234,7 +250,10 @@ FORM FA3XmlImport FORMEXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:Faktura'
         NrKSeFFaKorygowanej EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:NrKSeFFaKorygowanej'
 
     OBJECTS z = INTEGER EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:FakturaZaliczkowa' IN Fa
-    PROPERTIES(z) NrKSeFFaZaliczkowej EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:NrKSeFFaZaliczkowej'
+    PROPERTIES(z)
+        NrKSeFZN EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:NrKSeFZN',
+        NrFaZaliczkowej EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:NrFaZaliczkowej',
+        NrKSeFFaZaliczkowej EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:NrKSeFFaZaliczkowej'
 
     OBJECTS faWiersz = INTEGER EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:FaWiersz' IN Fa
     PROPERTIES(faWiersz)
@@ -244,7 +263,9 @@ FORM FA3XmlImport FORMEXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:Faktura'
         P_8A EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:P_8A',
         P_8B EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:P_8B',
         P_9A EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:P_9A',
+        P_9B EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:P_9B',
         P_11 EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:P_11',
+        P_11A EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:P_11A',
         P_12 EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:P_12',
         StanPrzed EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:StanPrzed',
         UU_ID EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:UU_ID',
@@ -253,6 +274,10 @@ FORM FA3XmlImport FORMEXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:Faktura'
         CN EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:CN',
         PKOB EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:PKOB'
     FILTERS imported(faWiersz)
+
+    PROPERTIES() IN Platnosc
+        Zaplacono EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:Zaplacono',
+        DataZaplaty EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:DataZaplaty'
 
     OBJECTS tp = INTEGER EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:TerminPlatnosci' IN Platnosc
     PROPERTIES(tp) Termin EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:Termin'
@@ -267,6 +292,9 @@ FORM FA3XmlImport FORMEXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:Faktura'
     PROPERTIES(dof)
         DodatkowyOpisKlucz EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:Klucz',
         DodatkowyOpisWartosc EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:Wartosc'
+
+    OBJECTS si = INTEGER EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:Informacje' IN Stopka
+    PROPERTIES(si) StopkaFaktury EXTID '=http://crd.gov.pl/wzor/2025/06/25/13775/:StopkaFaktury'
 ;
 
 import (Faktura nf) {
@@ -300,15 +328,21 @@ import (Faktura nf) {
     PrzyczynaKorekty(nf) <- PrzyczynaKorekty(); DataWystFaKorygowanej(nf) <- DATE(DataWystFaKorygowanej());
     NrFaKorygowanej(nf) <- NrFaKorygowanej(); NrKSeFFaKorygowanej(nf) <- NrKSeFFaKorygowanej();
 
-    FOR NrKSeFFaZaliczkowej(INTEGER fz) DO NEW z = FakturaZaliczkowa {
+    FOR NrFaZaliczkowej(INTEGER fz) OR NrKSeFFaZaliczkowej(fz) DO NEW z = FakturaZaliczkowa {
         faktura(z) <- nf;
-        number(z) <- NrKSeFFaZaliczkowej(fz);
+        invoiceNumber(z) <- NrFaZaliczkowej(fz);
+        number(z) <- NrKSeFFaZaliczkowej(fz) IF NOT NrFaZaliczkowej(fz);
     }
 
     FOR DodatkowyOpisKlucz(INTEGER dof) DO NEW d = DodatkowyOpis {
         faktura(d) <- nf;
         Klucz(d) <- DodatkowyOpisKlucz(dof);
         Wartosc(d) <- DodatkowyOpisWartosc(dof);
+    }
+
+    FOR StopkaFaktury(INTEGER si) DO NEW s = StopkaInformacja {
+        faktura(s) <- nf;
+        value(s) <- StopkaFaktury(si);
     }
 
     FOR imported(INTEGER faWiersz) DO NEW fw = FaWiersz {
@@ -318,8 +352,9 @@ import (Faktura nf) {
         description(fw) <- P_7(faWiersz);
         nameUom(fw) <- P_8A(faWiersz);
         quantity(fw) <- P_8B(faWiersz);
-        price(fw) <- P_9A(faWiersz);
+        price(fw) <- OVERRIDE P_9A(faWiersz), P_9B(faWiersz);
         untaxedAmount(fw) <- P_11(faWiersz);
+        amount(fw) <- P_11A(faWiersz);
         taxes(fw) <- P_12(faWiersz);
         correction(fw) <- StanPrzed(faWiersz);
 
@@ -335,6 +370,8 @@ import (Faktura nf) {
         date(t) <- Termin(tp);
     }
 
+    Zaplacono(nf) <- Zaplacono();
+    DataZaplaty(nf) <- DataZaplaty();
     FormaPlatnosci(nf) <- FormaPlatnosci();
 
     FOR RachunekBankowyNumber(INTEGER rb) DO NEW r = RachunekBankowy {

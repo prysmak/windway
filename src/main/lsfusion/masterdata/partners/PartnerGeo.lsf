@@ -4,10 +4,20 @@ REQUIRE Partner, Geo, GeoUtils;
 
 NAMESPACE MasterData;
 
-META defineObjectMap(object, lobj, container)
-    latitude 'Latitude'= DATA NUMERIC[11,6] (###object);
-    longitude 'Longitude' = DATA NUMERIC[11,6] (###object);
+// for google maps required API : Geocoding, Maps JavaScript, Places
 
+META defineObjectMap(object, lobj, container)
+    latitude 'Latitude' = DATA DOUBLE (###object);
+    longitude 'Longitude' = DATA DOUBLE (###object);
+
+    coordinates 'Coordinates' (###object o) = CONCAT ' ', latitude(o), longitude(o) CHARWIDTH 30;
+    changeCoordinates (###object o) {
+        INPUT s = STRING[50] DO {
+            latitude(o) <- DOUBLE(getWord(replace(s, ', ', ' '), ' ', 1));
+            longitude(o) <- DOUBLE(getWord(replace(s, ', ', ' '), ' ', 2));
+        }
+    }
+    
     distance (###object p) = abs(longitude(p) - longitude()) + abs(latitude(p) - latitude());
     near(###object p) = distance(p) <= (OVERRIDE distanceAccuracy(), 0.001);
 
@@ -27,10 +37,19 @@ META defineObjectMap(object, lobj, container)
             afterInputGoogleAddress(p, a);
         }
     }
+        
+    // temporary instead of inputGoogleAddress
+//    WHEN LOCAL CHANGED(addressCsv(###object o)) AND autoSynchronizeCoordinates() DO {
+//        TRY {
+//            getCoordinates (addressCsv(o));
+//            latitude(o) <- readLatitude();
+//            longitude(o) <- readLongitude();
+//        }
+//    }
 
     EXTEND FORM object
         PROPERTIES addressCsv(lobj) ON CHANGE inputGoogleAddress(lobj) SHOWIF apiKey(MapProvider.google)
-        PROPERTIES(lobj) latitude, longitude
+        PROPERTIES(lobj) coordinates ON CHANGE changeCoordinates(lobj)
 
         OBJECTS lobj##g = ###object MAP
         PROPERTIES(lobj##g) name READONLY, latitude, longitude
@@ -45,8 +64,7 @@ META defineObjectMap(object, lobj, container)
                 MOVE PROPERTY(addressCsv(lobj)) { alignment = STRETCH; }
                 NEW coordinates {
                     horizontal = TRUE;
-                    MOVE PROPERTY(latitude(lobj));
-                    MOVE PROPERTY(longitude(lobj));
+                    MOVE PROPERTY(coordinates(lobj));
                 }
                 MOVE BOX(lobj##g) {
                     height = 300;
